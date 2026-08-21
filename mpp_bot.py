@@ -18,7 +18,7 @@ import time
 # Configuration
 LOGIN = os.environ.get('MPP_LOGIN', 'sebsdp@yahoo.fr')
 PASSWORD = os.environ.get('MPP_PASSWORD', 'Football99@')
-MPP_URL = 'https://www.mpp.fr'
+MPP_URL = 'https://mpp.football'
 print(f"🔗 URL MPP configurée: {MPP_URL}")
 
 class LiguePredictor:
