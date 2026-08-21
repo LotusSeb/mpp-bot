@@ -1,0 +1,56 @@
+name: MPP Bot - Pronostics Ligue 1
+
+# Exécution chaque lundi à 9h du matin (heure UTC)
+# Note: GitHub Actions utilise UTC, donc 9h UTC = 11h CEST (été)
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Lundi à 9h UTC
+  
+  # Permet de lancer manuellement depuis GitHub
+  workflow_dispatch:
+
+jobs:
+  pronostics:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Récupère le code du repo
+      - uses: actions/checkout@v3
+      
+      # 2. Configure Python
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      # 3. Configure Chrome/Chromium (pour Selenium)
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@latest
+      
+      - name: Setup ChromeDriver
+        uses: nanasess/setup-chromedriver@master
+      
+      # 4. Installe les dépendances Python
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      # 5. Lance le bot avec les secrets
+        # Les secrets sont injected comme variables d'environnement
+      - name: Run MPP Bot
+        env:
+          MPP_LOGIN: ${{ secrets.MPP_LOGIN }}
+          MPP_PASSWORD: ${{ secrets.MPP_PASSWORD }}
+          FOOTBALL_API_TOKEN: ${{ secrets.FOOTBALL_API_TOKEN }}
+        run: |
+          python mpp_bot.py
+      
+      # 6. Notification de succès/erreur
+      - name: Notify on success
+        if: success()
+        run: echo "✅ Pronostics soumis avec succès!"
+      
+      - name: Notify on failure
+        if: failure()
+        run: echo "❌ Erreur lors de la soumission des pronostics"
