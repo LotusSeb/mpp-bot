@@ -4,6 +4,7 @@ Exécution : Chaque lundi à 9h (via GitHub Actions)
 """
 
 import os
+import shutil
 import json
 from datetime import datetime, timedelta
 import requests
@@ -263,6 +264,8 @@ class MPPBot:
     
     def setup_driver(self):
         """Configure le navigateur Chrome pour GitHub Actions"""
+        import shutil
+        
         chrome_options = Options()
         
         # Pour GitHub Actions (headless, pas d'affichage)
@@ -273,14 +276,39 @@ class MPPBot:
         chrome_options.add_argument('--window-size=1920,1080')
         chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
         
+        # Cherche Chrome à tous les endroits possibles
+        chrome_paths = [
+            '/usr/bin/google-chrome',
+            '/usr/bin/google-chrome-stable',
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            shutil.which('google-chrome'),
+            shutil.which('chromium'),
+            shutil.which('chromium-browser'),
+        ]
+        
+        chrome_binary = None
+        for path in chrome_paths:
+            if path and os.path.exists(path):
+                chrome_binary = path
+                print(f"✅ Trouvé Chrome à: {path}")
+                break
+        
+        if chrome_binary:
+            chrome_options.binary_location = chrome_binary
+        
         try:
             # Utilise webdriver-manager pour trouver ChromeDriver automatiquement
             service = Service(ChromeDriverManager().install())
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
         except Exception as e:
             print(f"⚠️ Erreur avec webdriver-manager: {e}")
-            # Fallback: essaie sans service
-            self.driver = webdriver.Chrome(options=chrome_options)
+            try:
+                # Fallback: essaie sans service (laisse Selenium trouver chromedriver)
+                self.driver = webdriver.Chrome(options=chrome_options)
+            except Exception as e2:
+                print(f"❌ Erreur Chrome: {e2}")
+                raise
         
         print("✅ Navigateur configuré")
     
