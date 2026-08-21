@@ -20,7 +20,8 @@ jobs:
       - name: Install Chrome
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-browser chromium-chromedriver
+          sudo apt-get install -y google-chrome-stable
+          sudo apt-get install -y chromedriver
       
       - name: Install dependencies
         run: |
@@ -41,4 +42,4 @@ jobs:
       
       - name: Notify on failure
         if: failure()
-        run: echo "❌ Erreur lors de la soumission des pronostics"
+        run: echo "❌ Erreur lors de la soumission"
