@@ -396,14 +396,14 @@ class MPPBot:
             
             # Maintenant le formulaire de login devrait être visible
             print("🔄 Recherche du champ email dans le formulaire...")
-            # Essaie différents sélecteurs pour trouver le champ email
+            # Essaie différents sélecteurs pour trouver le champ email/username
             email_field = None
             selectors = [
-                (By.XPATH, "//input[@placeholder='Adresse e-mail*']"),
-                (By.XPATH, "//input[@placeholder*='mail']"),
+                (By.ID, 'username'),
+                (By.XPATH, "//input[@id='username']"),
                 (By.XPATH, "//input[@type='email']"),
                 (By.NAME, 'email'),
-                (By.ID, 'email'),
+                (By.XPATH, "//input[@placeholder='Adresse e-mail*']"),
             ]
             
             for selector in selectors:
@@ -443,11 +443,11 @@ class MPPBot:
             print("🔄 Recherche du champ password...")
             password_field = None
             pwd_selectors = [
-                (By.XPATH, "//input[@placeholder='Mot de passe*']"),
-                (By.XPATH, "//input[@placeholder*='pass']"),
+                (By.ID, 'password'),
+                (By.XPATH, "//input[@id='password']"),
                 (By.XPATH, "//input[@type='password']"),
                 (By.NAME, 'password'),
-                (By.ID, 'password'),
+                (By.XPATH, "//input[@placeholder='Mot de passe*']"),
             ]
             
             for selector in pwd_selectors:
