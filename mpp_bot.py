@@ -340,31 +340,45 @@ class MPPBot:
     def login_mpp(self):
         """Se connecte à MPP"""
         try:
+            print("🔄 Accès à la page de login MPP...")
             self.driver.get(f'{MPP_URL}/login')
-            time.sleep(3)
+            time.sleep(5)  # Attendre le chargement
             
             # Ferme les pubs avant de se connecter
             self.close_ads()
+            time.sleep(2)
             
+            print("🔄 Recherche du champ email...")
             # À adapter selon la structure HTML réelle de MPP
-            email_field = WebDriverWait(self.driver, 10).until(
+            email_field = WebDriverWait(self.driver, 20).until(
                 EC.presence_of_element_located((By.ID, 'email'))
             )
+            time.sleep(1)
             email_field.send_keys(self.login)
+            print("✅ Email saisi")
             
             # Ferme les pubs qui pourraient apparaître
             self.close_ads()
+            time.sleep(2)
             
-            password_field = self.driver.find_element(By.ID, 'password')
+            print("🔄 Recherche du champ password...")
+            password_field = WebDriverWait(self.driver, 20).until(
+                EC.presence_of_element_located((By.ID, 'password'))
+            )
+            time.sleep(1)
             password_field.send_keys(self.password)
+            print("✅ Password saisi")
             
-            login_btn = self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]')
+            print("🔄 Clic sur le bouton login...")
+            login_btn = WebDriverWait(self.driver, 20).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'button[type="submit"]'))
+            )
             login_btn.click()
-            
-            time.sleep(5)
+            time.sleep(7)  # Attendre la redirection après login
             
             # Ferme les pubs après connexion
             self.close_ads()
+            time.sleep(2)
             
             print("✅ Connecté à MPP")
             return True
@@ -376,11 +390,13 @@ class MPPBot:
         """Remplit les pronostics sur MPP"""
         try:
             # Accès à la page des pronostics
+            print("🔄 Accès à la page des pronostics...")
             self.driver.get(f'{MPP_URL}/pronostics')
-            time.sleep(3)
+            time.sleep(5)
             
             # Ferme les pubs au chargement
             self.close_ads()
+            time.sleep(2)
             
             for pred in predictions:
                 print(f"📝 Remplissage: {pred['home_team']} {pred['home_goals']}-{pred['away_goals']} {pred['away_team']}")
@@ -390,20 +406,19 @@ class MPPBot:
                 try:
                     # Ferme les pubs avant chaque remplissage
                     self.close_ads()
+                    time.sleep(1)
                     
                     # Exemple: trouver les inputs par le nom du match
-                    home_input = self.driver.find_element(
-                        By.XPATH, 
-                        f"//input[@data-team='{pred['home_team']}'][@data-type='home']"
+                    home_input = WebDriverWait(self.driver, 20).until(
+                        EC.presence_of_element_located((By.XPATH, f"//input[@data-team='{pred['home_team']}'][@data-type='home']"))
                     )
-                    away_input = self.driver.find_element(
-                        By.XPATH,
-                        f"//input[@data-team='{pred['away_team']}'][@data-type='away']"
+                    away_input = WebDriverWait(self.driver, 20).until(
+                        EC.presence_of_element_located((By.XPATH, f"//input[@data-team='{pred['away_team']}'][@data-type='away']"))
                     )
                     
                     # Scroll jusqu'aux inputs pour éviter les overlays
                     self.driver.execute_script("arguments[0].scrollIntoView(true);", home_input)
-                    time.sleep(1)
+                    time.sleep(2)
                     
                     home_input.clear()
                     home_input.send_keys(str(pred['home_goals']))
@@ -417,11 +432,15 @@ class MPPBot:
             
             # Ferme les pubs avant de soumettre
             self.close_ads()
+            time.sleep(2)
             
             # Soumet les pronostics
-            submit_btn = self.driver.find_element(By.CSS_SELECTOR, 'button[class*="submit"]')
+            print("🔄 Soumission des pronostics...")
+            submit_btn = WebDriverWait(self.driver, 20).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'button[class*="submit"]'))
+            )
             submit_btn.click()
-            time.sleep(3)
+            time.sleep(5)
             print("✅ Pronostics soumis!")
             return True
         except Exception as e:
