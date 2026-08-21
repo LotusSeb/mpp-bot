@@ -18,7 +18,8 @@ import time
 # Configuration
 LOGIN = os.environ.get('MPP_LOGIN', 'sebsdp@yahoo.fr')
 PASSWORD = os.environ.get('MPP_PASSWORD', 'Football99@')
-MPP_URL = 'https://www.mpp.fr'  # À vérifier
+MPP_URL = 'https://www.mpp.fr'
+print(f"🔗 URL MPP configurée: {MPP_URL}")
 
 class LiguePredictor:
     """Récupère les stats Ligue 1 et génère les prédictions"""
@@ -270,7 +271,13 @@ class MPPBot:
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
         chrome_options.add_argument('--window-size=1920,1080')
-        chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+        chrome_options.add_argument('--start-maximized')
+        chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+        
+        # Désactiver les notifications et popups
+        prefs = {"profile.default_content_settings.popups": 0}
+        chrome_options.add_experimental_option("prefs", prefs)
         
         # Utilise Chromium du système (installé via apt-get)
         chrome_options.binary_location = '/usr/bin/chromium-browser'
@@ -279,7 +286,11 @@ class MPPBot:
         service = Service('/usr/bin/chromedriver')
         
         try:
+            print("🔄 Initialisation du navigateur Chromium...")
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            # Important: définir les timeouts globaux
+            self.driver.set_page_load_timeout(30)
+            self.driver.implicitly_wait(10)
             print("✅ Navigateur Chromium configuré")
         except Exception as e:
             print(f"❌ Erreur Chromium: {e}")
@@ -458,6 +469,14 @@ def main():
     print("=" * 50)
     print("🚀 MPP Bot Ligue 1 - Exécution", datetime.now())
     print("=" * 50)
+    
+    # Test de connectivité
+    print("🔍 Test de connectivité au site MPP...")
+    try:
+        response = requests.get(MPP_URL, timeout=10)
+        print(f"✅ MPP accessible (status: {response.status_code})")
+    except Exception as e:
+        print(f"⚠️ Attention: MPP peut être inaccessible: {e}")
     
     # Étape 1: Récupérer les matchs
     predictor = LiguePredictor()
