@@ -351,23 +351,59 @@ class MPPBot:
     def login_mpp(self):
         """Se connecte à MPP"""
         try:
-            print("🔄 Accès à la page de login MPP...")
-            self.driver.get(f'{MPP_URL}/login')
+            print("🔄 Accès à la page d'accueil MPP...")
+            self.driver.get(f'{MPP_URL}/')
+            print("🔄 Attente du chargement (5 secondes)...")
             time.sleep(5)
             
-            # Ferme les pubs avant de se connecter
+            print(f"Titre: {self.driver.title}")
+            print(f"URL: {self.driver.current_url}")
+            
+            # Ferme les pubs
             self.close_ads()
             time.sleep(2)
             
-            print("🔄 Recherche du champ email...")
+            print("🔄 Recherche du bouton 'Se connecter' en haut à droite...")
+            # Clique sur le bouton "Se connecter" bleu
+            connect_btn = None
+            btn_selectors = [
+                (By.XPATH, "//button[contains(text(), 'Se connecter')]"),
+                (By.XPATH, "//*[contains(text(), 'Se connecter')]"),
+            ]
+            
+            for selector in btn_selectors:
+                try:
+                    connect_btn = WebDriverWait(self.driver, 5).until(
+                        EC.presence_of_element_located(selector)
+                    )
+                    print(f"✅ Trouvé bouton 'Se connecter' avec: {selector}")
+                    break
+                except:
+                    continue
+            
+            if not connect_btn:
+                print("❌ Impossible de trouver le bouton 'Se connecter'")
+                print("Tous les boutons disponibles:")
+                buttons = self.driver.find_elements(By.TAG_NAME, "button")
+                for btn in buttons:
+                    print(f"  - '{btn.text}'")
+                raise Exception("Bouton 'Se connecter' non trouvé")
+            
+            print("🔄 Clic sur le bouton 'Se connecter'...")
+            connect_btn.click()
+            print("🔄 Attente de l'ouverture du formulaire (5 secondes)...")
+            time.sleep(5)
+            
+            # Maintenant le formulaire de login devrait être visible
+            print("🔄 Recherche du champ email dans le formulaire...")
             # Essaie différents sélecteurs pour trouver le champ email
             email_field = None
             selectors = [
-                (By.ID, 'email'),
-                (By.NAME, 'email'),
-                (By.XPATH, "//input[@type='email']"),
+                (By.XPATH, "//input[@placeholder='Adresse e-mail*']"),
                 (By.XPATH, "//input[@placeholder*='mail']"),
-                (By.XPATH, "//input[@placeholder*='Email']"),
+                (By.XPATH, "//input[@type='email']"),
+                (By.NAME, 'email'),
+                (By.ID, 'email'),
             ]
             
             for selector in selectors:
@@ -384,9 +420,16 @@ class MPPBot:
                 print("❌ Impossible de trouver le champ email")
                 print("Les éléments disponibles:")
                 inputs = self.driver.find_elements(By.TAG_NAME, "input")
-                for inp in inputs[:5]:
+                print(f"Total d'inputs trouvés: {len(inputs)}")
+                for inp in inputs[:10]:
                     attrs = inp.get_attribute("outerHTML")
-                    print(f"  - {attrs[:100]}")
+                    print(f"  - {attrs[:150]}")
+                
+                # Affiche aussi le HTML pour debug
+                print("\n🔍 HTML de la page (premiers 1000 caractères):")
+                html = self.driver.page_source[:1000]
+                print(html)
+                
                 raise Exception("Champ email non trouvé")
             
             time.sleep(1)
@@ -400,11 +443,11 @@ class MPPBot:
             print("🔄 Recherche du champ password...")
             password_field = None
             pwd_selectors = [
-                (By.ID, 'password'),
-                (By.NAME, 'password'),
+                (By.XPATH, "//input[@placeholder='Mot de passe*']"),
+                (By.XPATH, "//input[@placeholder*='pass']"),
                 (By.XPATH, "//input[@type='password']"),
-                (By.XPATH, "//input[@placeholder*='Pass']"),
-                (By.XPATH, "//input[@placeholder*='Mot de passe']"),
+                (By.NAME, 'password'),
+                (By.ID, 'password'),
             ]
             
             for selector in pwd_selectors:
@@ -425,37 +468,26 @@ class MPPBot:
             password_field.send_keys(self.password)
             print("✅ Password saisi")
             
-            print("🔄 Clic sur le bouton login...")
-            login_btn = None
-            btn_selectors = [
+            print("🔄 Recherche du bouton 'Se connecter' du formulaire...")
+            submit_btn = None
+            submit_selectors = [
                 (By.XPATH, "//button[contains(text(), 'Se connecter')]"),
-                (By.XPATH, "//button[contains(., 'Se connecter')]"),
                 (By.CSS_SELECTOR, 'button[type="submit"]'),
-                (By.XPATH, "//button[contains(text(), 'Connexion')]"),
-                (By.XPATH, "//button[contains(text(), 'Login')]"),
             ]
             
-            for selector in btn_selectors:
+            for selector in submit_selectors:
                 try:
-                    login_btn = WebDriverWait(self.driver, 5).until(
+                    submit_btn = WebDriverWait(self.driver, 5).until(
                         EC.presence_of_element_located(selector)
                     )
-                    print(f"✅ Trouvé bouton login avec: {selector}")
+                    print(f"✅ Trouvé bouton submit avec: {selector}")
                     break
                 except:
                     continue
             
-            if not login_btn:
-                print("❌ Impossible de trouver le bouton login")
-                print("Tous les boutons disponibles:")
-                buttons = self.driver.find_elements(By.TAG_NAME, "button")
-                for btn in buttons:
-                    text = btn.text
-                    print(f"  - Bouton: '{text}'")
-                raise Exception("Bouton login non trouvé")
-            
-            print(f"Texte du bouton: '{login_btn.text}'")
-            login_btn.click()
+            if not submit_btn:
+                print("❌ Impossible de trouver le bouton 'Se connecter'")
+                raise Exception("Bouton submit non trouvé")
             time.sleep(7)
             
             # Ferme les pubs après connexion
