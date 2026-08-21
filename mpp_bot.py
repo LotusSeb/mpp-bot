@@ -12,6 +12,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 import time
 
 # Configuration
@@ -271,7 +273,15 @@ class MPPBot:
         chrome_options.add_argument('--window-size=1920,1080')
         chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
         
-        self.driver = webdriver.Chrome(options=chrome_options)
+        try:
+            # Utilise webdriver-manager pour trouver ChromeDriver automatiquement
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+        except Exception as e:
+            print(f"⚠️ Erreur avec webdriver-manager: {e}")
+            # Fallback: essaie sans service
+            self.driver = webdriver.Chrome(options=chrome_options)
+        
         print("✅ Navigateur configuré")
     
     def close_ads(self):
