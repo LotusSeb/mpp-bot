@@ -1,5 +1,5 @@
 """
-MPP Bot - ÉTAPE 3: Prédictions - Lire noms correctement
+MPP Bot - ÉTAPE 3: Prédictions - Filtrer les VRAIS noms
 """
 
 import os
@@ -52,7 +52,7 @@ try:
     score_inputs = [i for i in all_inputs if i.is_displayed()]
     print(f"   ✅ {len(score_inputs)} inputs trouvés")
     
-    # Récupère TOUS les textes une fois
+    # Récupère TOUS les textes
     js_all_text = """
     const inputs = document.querySelectorAll('input');
     const input = inputs[0];
@@ -71,70 +71,77 @@ try:
     
     all_text = driver.execute_script(js_all_text)
     
-    # Lire les % et noms pour chaque match
+    # Filtre pour garder JUSTE les noms d'équipes
+    # = textes avec des lettres, pas de %, pas d'horaire, pas de nombres seuls
+    exclusions = ['Créer', 'Rejoindre', 'Importer', 'Afficher', 'stats', 'Dimanche', 'août', 'J.1', '-', 'Activer', 'bonus', 'McDo', 'Ligue', 'compétition', 'Nouvelle']
+    
+    team_names = []
+    for text in all_text:
+        # Vérifie que c'est un vrai nom
+        if ('%' not in text and 
+            ':' not in text and  # Pas d'horaire
+            not text.replace('.', '').isdigit() and  # Pas de nombre
+            any(c.isalpha() for c in text) and  # Au moins une lettre
+            text not in exclusions and
+            len(text) > 2):
+            team_names.append(text)
+    
+    # Lire les % pour chaque match
     print("\n📊 Calcul des prédictions...")
     match_count = 0
-    i = 0
-    while i < len(all_text) and match_count < 3:
+    for i in range(0, len(all_text), 5):
+        if match_count >= 3:
+            break
+        
         text = all_text[i]
         
-        # Cherche un % pour identifier le match
+        # Cherche les 3 %
         if '%' in text:
-            # Récupère les 3 % du match
-            pct1 = int(text.rstrip('%'))
-            pct2 = int(all_text[i+2].rstrip('%'))
-            pct3 = int(all_text[i+4].rstrip('%'))
-            
-            # Cherche les noms: remonte pour trouver 2 textes sans %
-            team_names = []
-            for j in range(i-1, max(0, i-10), -1):
-                if '%' not in all_text[j] and len(all_text[j]) > 0 and all_text[j] not in ['Créer', 'Rejoindre', 'Importer', 'Afficher stats', 'Dimanche', 'août', 'J.1', '-', 'Activer']:
-                    team_names.insert(0, all_text[j])
-                    if len(team_names) == 2:
-                        break
-            
-            if len(team_names) >= 2:
-                team_home = team_names[-2]
-                team_away = team_names[-1]
-                match_name = f"{team_home} vs {team_away}"
-                
-                # Prédiction de base: 1-1
-                our_home = 1
-                our_away = 1
+            try:
+                pct1 = int(text.rstrip('%'))
+                pct2 = int(all_text[i+2].rstrip('%'))
+                pct3 = int(all_text[i+4].rstrip('%'))
                 pcts = [pct1, pct2, pct3]
-                max_idx = pcts.index(max(pcts))
                 
-                if max_idx == 0:
-                    consensus_pred = (1, 0)
-                elif max_idx == 1:
-                    consensus_pred = (1, 1)
-                else:
-                    consensus_pred = (0, 1)
-                
-                final_home = int(our_home * 0.25 + consensus_pred[0] * 0.75)
-                final_away = int(our_away * 0.25 + consensus_pred[1] * 0.75)
-                
-                bonus_str = ""
-                if max(pcts) > 80:
-                    bonus_str = " (+1 bonus)"
+                # Prend les noms correspondants
+                if match_count < len(team_names) - 1:
+                    team_home = team_names[match_count * 2]
+                    team_away = team_names[match_count * 2 + 1]
+                    match_name = f"{team_home} vs {team_away}"
+                    
+                    # Prédiction de base: 1-1
+                    our_home = 1
+                    our_away = 1
+                    max_idx = pcts.index(max(pcts))
+                    
                     if max_idx == 0:
-                        final_home += 1
+                        consensus_pred = (1, 0)
                     elif max_idx == 1:
-                        final_home += 1
-                        final_away += 1
+                        consensus_pred = (1, 1)
                     else:
-                        final_away += 1
-                
-                print(f"   ✅ {match_name}")
-                print(f"      Consensus: {pct1}% {pct2}% {pct3}%")
-                print(f"      Pondéré: {final_home}-{final_away}{bonus_str}")
-                
-                match_count += 1
-                i += 5
-            else:
-                i += 1
-        else:
-            i += 1
+                        consensus_pred = (0, 1)
+                    
+                    final_home = int(our_home * 0.25 + consensus_pred[0] * 0.75)
+                    final_away = int(our_away * 0.25 + consensus_pred[1] * 0.75)
+                    
+                    bonus_str = ""
+                    if max(pcts) > 80:
+                        bonus_str = " (+1 bonus)"
+                        if max_idx == 0:
+                            final_home += 1
+                        elif max_idx == 1:
+                            final_home += 1
+                            final_away += 1
+                        else:
+                            final_away += 1
+                    
+                    print(f"   ✅ {match_name}")
+                    print(f"      Consensus: {pct1}% {pct2}% {pct3}%")
+                    print(f"      Pondéré: {final_home}-{final_away}{bonus_str}")
+                    
+                    match_count += 1
+            except:
+                pass
     
     print("\n✅ ÉTAPE 3 RÉUSSIE!")
 
