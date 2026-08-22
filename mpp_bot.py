@@ -174,15 +174,15 @@ class MPPBot:
             print(f"   📊 {len(all_buttons)} boutons trouvés")
             
             print("   [3/5] Clic 'Se connecter'...")
-            connect_btn = WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Se connecter')]"))
+            connect_btn = WebDriverWait(self.driver, 5).until(
+                EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Se connecter')]"))
             )
             connect_btn.click()
             print("   ✅ Clic OK")
             time.sleep(3)
             
             print("   [4/5] Saisie identifiants...")
-            username_field = WebDriverWait(self.driver, 10).until(
+            username_field = WebDriverWait(self.driver, 5).until(
                 EC.presence_of_element_located((By.ID, 'username'))
             )
             username_field.send_keys(self.login)
