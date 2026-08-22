@@ -149,15 +149,15 @@ try:
         if input_idx + 1 < len(score_inputs):
             print(f"   ✅ {pred['match']}: {pred['home']}-{pred['away']}")
             
-            # Attendre 3 sec AVANT le premier clic
-            time.sleep(3)
+            # Clic + remplissage home
+            time.sleep(4)
             score_inputs[input_idx].click()
             time.sleep(0.1)
             score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
             score_inputs[input_idx].send_keys(str(pred['home']))
             
-            # Attendre 3 sec AVANT le second clic
-            time.sleep(3)
+            # Clic + remplissage away (attendre 4 sec aussi)
+            time.sleep(4)
             score_inputs[input_idx + 1].click()
             time.sleep(0.1)
             score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
