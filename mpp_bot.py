@@ -1,5 +1,5 @@
 """
-MPP Ligue 1 Bot - VERSION STABLE SIMPLE
+MPP Ligue 1 Bot - VERSION STABLE
 Pondération 25% algo + 75% consensus + bonus si consensus > 80%
 """
 
@@ -25,7 +25,7 @@ class MPPBot:
         self.driver = None
 
     def get_matches(self):
-        """Récupère les matchs de Ligue 1 non commencés"""
+        """Récupère les matchs de Ligue 1"""
         try:
             print("\n[1/4] Récupération des matchs...")
             headers = {'X-Auth-Token': self.api_token}
@@ -36,12 +36,8 @@ class MPPBot:
             print(f"   📊 Réponse: {response.status_code}")
             
             if response.status_code == 200:
-                all_matches = response.json().get('matches', [])
-                
-                # Filtrer: ne garder que les matchs SCHEDULED (pas commencés)
-                matches = [m for m in all_matches if m.get('status') == 'SCHEDULED']
-                
-                print(f"   ✅ {len(matches)} matchs trouvés (non commencés)")
+                matches = response.json().get('matches', [])
+                print(f"   ✅ {len(matches)} matchs trouvés")
                 return matches
             return []
         except Exception as e:
@@ -155,8 +151,6 @@ class MPPBot:
             return True
         except Exception as e:
             print(f"   ❌ Erreur login: {e}")
-            import traceback
-            traceback.print_exc()
             return False
 
     def read_consensus_percentages_per_match(self, score_inputs):
@@ -206,12 +200,12 @@ class MPPBot:
                     if len(pcts) >= 3:
                         consensus_by_match[match_idx] = pcts[:3]
                         print(f"   ✅ Match {match_idx+1}: {pcts[0]}% {pcts[1]}% {pcts[2]}%")
-                except Exception as e:
+                except:
                     pass
             
             print(f"   ✅ {len(consensus_by_match)} matchs avec %")
             return consensus_by_match
-        except Exception as e:
+        except:
             return {}
 
     def blend_with_consensus(self, our_home, our_away, consensus_percentages_match):
@@ -355,33 +349,17 @@ class MPPBot:
                         'away_goals': final_away
                     })
                     
-                    # Retry logic simple
-                    for retry in range(3):
-                        try:
-                            time.sleep(0.3)
-                            score_inputs[input_idx].click()
-                            time.sleep(0.1)
-                            score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
-                            score_inputs[input_idx].send_keys(str(final_home))
-                            print(f"      ✅ Home: {final_home}")
-                            break
-                        except:
-                            if retry < 2:
-                                time.sleep(0.5)
+                    score_inputs[input_idx].click()
+                    time.sleep(0.1)
+                    score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
+                    score_inputs[input_idx].send_keys(str(final_home))
+                    print(f"      ✅ Home: {final_home}")
                     
-                    for retry in range(3):
-                        try:
-                            time.sleep(0.3)
-                            score_inputs[input_idx + 1].click()
-                            time.sleep(0.1)
-                            score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
-                            score_inputs[input_idx + 1].send_keys(str(final_away))
-                            print(f"      ✅ Away: {final_away}")
-                            break
-                        except:
-                            if retry < 2:
-                                time.sleep(0.5)
-                    
+                    score_inputs[input_idx + 1].click()
+                    time.sleep(0.1)
+                    score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
+                    score_inputs[input_idx + 1].send_keys(str(final_away))
+                    print(f"      ✅ Away: {final_away}")
                     print(f"      ✅ Match rempli!")
             
             print("\n✅ TOUS LES PRONOSTICS REMPLIS!")
