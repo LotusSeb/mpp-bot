@@ -231,6 +231,10 @@ class MPPBot:
             current_url = self.driver.current_url
             print(f"   ✅ URL finale: {current_url}")
             print("✅ CONNECTÉ AVEC SUCCÈS!")
+            
+            # Lecture du consensus
+            self.consensus = self.read_consensus_percentages()
+            
             return True
         except Exception as e:
             print(f"❌ ERREUR: {e}")
@@ -238,6 +242,26 @@ class MPPBot:
                 print(f"   📍 URL actuelle: {self.driver.current_url}")
             return False
     
+
+    def read_consensus_percentages(self):
+        """Lit les % des autres parieurs sur la page"""
+        try:
+            print("
+📊 Lecture du consensus...")
+            import re
+            page_text = self.driver.page_source
+            
+            # Cherche tous les pourcentages
+            percentages = re.findall(r'(\d+)%', page_text)
+            print(f"   ✅ {len(percentages)} pourcentages trouvés")
+            if percentages:
+                print(f"   📈 Exemples: {percentages[:10]}")
+            
+            return percentages
+        except Exception as e:
+            print(f"   ⚠️ Erreur lecture consensus: {e}")
+            return []
+
     def fill_predictions(self, predictions):
         try:
             print(f"\n📝 === REMPLISSAGE ===")
