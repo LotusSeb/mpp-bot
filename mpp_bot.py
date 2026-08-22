@@ -248,19 +248,22 @@ class MPPBot:
         try:
             print("\n📊 Lecture du consensus...")
             
-            # Cherche les éléments qui affichent JUSTE des % (ex: "55%", "4%")
+            # Cherche les éléments qui affichent JUSTE des %
             js_code = """
             const elements = document.querySelectorAll('*');
             const percentElements = [];
             
             elements.forEach(el => {
-                const text = el.textContent.trim();
-                if (/^\\d+%$/.test(text)) {
-                    percentElements.push({
-                        value: parseInt(text),
-                        text: text
-                    });
-                }
+                try {
+                    const text = (el.innerText || el.textContent || '').trim();
+                    // Regex plus flexible: trouve juste des % (55%, 4%, 2%)
+                    if (/^\\d{1,3}%$/.test(text) && text.length <= 5) {
+                        percentElements.push({
+                            value: parseInt(text),
+                            text: text
+                        });
+                    }
+                } catch (e) {}
             });
             
             return percentElements;
@@ -268,14 +271,24 @@ class MPPBot:
             
             results = self.driver.execute_script(js_code)
             
-            print(f"   ✅ {len(results)} éléments avec juste des %")
-            if results:
-                values = [r['value'] for r in results[:20]]
-                print(f"      Premier 20: {values}")
+            # Déduplique (il peut y avoir des doublons)
+            unique_values = []
+            seen = set()
+            for r in results:
+                val = r['value']
+                if val not in seen:
+                    unique_values.append(val)
+                    seen.add(val)
             
-            return results
+            print(f"   ✅ {len(unique_values)} pourcentages uniques trouvés")
+            if unique_values:
+                print(f"      Valeurs: {sorted(unique_values)}")
+            
+            return unique_values
         except Exception as e:
             print(f"   ⚠️ Erreur: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
     def fill_predictions(self, predictions):
