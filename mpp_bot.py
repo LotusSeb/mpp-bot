@@ -235,9 +235,6 @@ class MPPBot:
             print("   ⏳ Attente 5 sec pour affichage des %...")
             time.sleep(5)
             
-            # Lecture du consensus
-            self.consensus = self.read_consensus_percentages()
-            
             return True
         except Exception as e:
             print(f"❌ ERREUR: {e}")
@@ -246,68 +243,69 @@ class MPPBot:
             return False
     
 
-    def read_consensus_percentages(self):
-        """Lit les % des autres parieurs"""
+    def read_consensus_percentages_per_match(self, score_inputs):
+        """Lit les % pour chaque match individuellement"""
         try:
-            print("\n📊 Lecture du consensus...")
+            print("\n📊 Lecture du consensus par match...")
             
-            # Cherche les éléments qui affichent JUSTE des %
-            js_code = """
-            const elements = document.querySelectorAll('*');
-            const percentElements = [];
+            consensus_by_match = {}
             
-            elements.forEach(el => {
-                try {
-                    const text = (el.innerText || el.textContent || '').trim();
-                    // Regex plus flexible: trouve juste des % (55%, 4%, 2%)
-                    if (/^\\d{1,3}%$/.test(text) && text.length <= 5) {
-                        percentElements.push({
-                            value: parseInt(text),
-                            text: text
-                        });
-                    }
-                } catch (e) {}
-            });
+            for idx in range(0, len(score_inputs), 2):
+                match_idx = idx // 2
+                
+                # JavaScript pour chercher les % près de cet input spécifique
+                js_code = f"""
+                const inputs = document.querySelectorAll('input');
+                const input = inputs[{idx}];
+                
+                // Cherche le parent commun qui contient ce match
+                let parent = input.closest('[class*="match"], [class*="card"], [class*="row"], div');
+                if (!parent || parent === document.body) {{
+                    parent = input.parentElement;
+                    for (let i = 0; i < 10; i++) {{
+                        parent = parent.parentElement;
+                        if (parent && parent.textContent.length > 100) break;
+                    }}
+                }}
+                
+                // Cherche les % dans ce parent
+                const elements = parent.querySelectorAll('*');
+                const percentElements = [];
+                
+                elements.forEach(el => {{
+                    try {{
+                        const text = (el.innerText || el.textContent || '').trim();
+                        if (/^\\d{{1,3}}%$/.test(text) && text.length <= 5) {{
+                            percentElements.push(parseInt(text));
+                        }}
+                    }} catch (e) {{}}
+                }});
+                
+                return percentElements.slice(0, 3);
+                """
+                
+                try:
+                    pcts = self.driver.execute_script(js_code)
+                    if len(pcts) >= 3:
+                        consensus_by_match[match_idx] = pcts[:3]
+                        print(f"   Match {match_idx+1}: {pcts[0]}% {pcts[1]}% {pcts[2]}%")
+                except:
+                    pass
             
-            return percentElements;
-            """
-            
-            results = self.driver.execute_script(js_code)
-            
-            # Déduplique (il peut y avoir des doublons)
-            unique_values = []
-            seen = set()
-            for r in results:
-                val = r['value']
-                if val not in seen:
-                    unique_values.append(val)
-                    seen.add(val)
-            
-            print(f"   ✅ {len(unique_values)} pourcentages uniques trouvés")
-            if unique_values:
-                print(f"      Valeurs: {sorted(unique_values)}")
-            
-            return unique_values
+            return consensus_by_match
         except Exception as e:
             print(f"   ⚠️ Erreur: {e}")
-            import traceback
-            traceback.print_exc()
-            return []
+            return {}
 
 
-    def blend_with_consensus(self, our_home, our_away, consensus_percentages, match_idx):
+    def blend_with_consensus(self, our_home, our_away, consensus_percentages_match):
         """Pondère 25% algo + 75% consensus"""
-        if not consensus_percentages or len(consensus_percentages) < (match_idx + 1) * 3:
+        if not consensus_percentages_match or len(consensus_percentages_match) < 3:
             return our_home, our_away
         
-        # Récupère les 3 % du match
-        start_idx = match_idx * 3
-        match_pcts = consensus_percentages[start_idx:start_idx + 3]
+        # consensus_percentages_match = [dom%, nul%, ext%]
+        match_pcts = consensus_percentages_match
         
-        if len(match_pcts) < 3:
-            return our_home, our_away
-        
-        # match_pcts = [dom%, nul%, ext%]
         print(f"      📊 Consensus: Dom={match_pcts[0]}% Nul={match_pcts[1]}% Ext={match_pcts[2]}%")
         
         # Determine consensus prediction based on highest %
@@ -343,6 +341,9 @@ class MPPBot:
             score_inputs = [i for i in all_inputs if i.is_displayed()]
             print(f"   ✅ {len(score_inputs)} champs visibles")
             
+            # Lecture du consensus PAR MATCH
+            consensus_by_match = self.read_consensus_percentages_per_match(score_inputs)
+            
             print("\n   [2/2] Remplissage des scores...")
             for idx, pred in enumerate(predictions):
                 input_idx = idx * 2
@@ -352,15 +353,15 @@ class MPPBot:
                     print(f"      📝 Prédiction algo: {pred['home_goals']}-{pred['away_goals']}")
                     
                     # Pondère avec consensus
+                    match_consensus = consensus_by_match.get(idx, [])
                     final_home, final_away = self.blend_with_consensus(
                         pred['home_goals'],
                         pred['away_goals'],
-                        self.consensus,
-                        idx
+                        match_consensus
                     )
                     
                     if final_home != pred['home_goals'] or final_away != pred['away_goals']:
-                        print(f"      ⚖️  Pondéré 50/50: {final_home}-{final_away}")
+                        print(f"      ⚖️  Pondéré 25/75: {final_home}-{final_away}")
                     
                     # Click, effacer 2 caractères avec Backspace, puis saisit
                     score_inputs[input_idx].click()
