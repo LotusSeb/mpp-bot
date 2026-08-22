@@ -437,6 +437,9 @@ class MPPBot:
             # Lecture du consensus PAR MATCH
             consensus_by_match = self.read_consensus_percentages_per_match(score_inputs)
             
+            # Sauvegarder les scores finaux pour l'email
+            final_predictions = []
+            
             print("\n   [2/2] Remplissage des scores...")
             for idx, pred in enumerate(predictions):
                 input_idx = idx * 2
@@ -455,6 +458,12 @@ class MPPBot:
                     
                     if final_home != pred['home_goals'] or final_away != pred['away_goals']:
                         print(f"      ⚖️  Pondéré 25/75: {final_home}-{final_away}")
+                    
+                    # Sauvegarde le score final
+                    final_pred = pred.copy()
+                    final_pred['home_goals'] = final_home
+                    final_pred['away_goals'] = final_away
+                    final_predictions.append(final_pred)
                     
                     # Click, effacer 2 caractères avec Backspace, puis saisit
                     score_inputs[input_idx].click()
@@ -476,9 +485,9 @@ class MPPBot:
             
             print("\n✅ TOUS LES PRONOSTICS REMPLIS!")
             
-            # Envoi de l'email
-            match_names = [f"{pred['home_team']} vs {pred['away_team']}" for pred in predictions]
-            self.send_email_predictions(predictions, match_names)
+            # Envoi de l'email avec les SCORES FINAUX
+            match_names = [f"{pred['home_team']} vs {pred['away_team']}" for pred in final_predictions]
+            self.send_email_predictions(final_predictions, match_names)
             
             return True
         except Exception as e:
