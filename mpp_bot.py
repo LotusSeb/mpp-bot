@@ -1,5 +1,5 @@
 """
-MPP Bot - ÉTAPE 3: Prédictions avec VRAIS noms
+MPP Bot - ÉTAPE 3: Prédictions - Lire noms simplement
 """
 
 import os
@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
-print("🚀 ÉTAPE 3: Prédictions avec VRAIS noms")
+print("🚀 ÉTAPE 3: Prédictions avec noms")
 
 # Config Chromium
 chrome_options = Options()
@@ -53,91 +53,94 @@ try:
     score_inputs = [i for i in all_inputs if i.is_displayed()]
     print(f"   ✅ {len(score_inputs)} inputs trouvés")
     
-    # Lire les noms, % et faire les prédictions
+    # Lire les noms et % pour chaque match
     print("\n📊 Calcul des prédictions...")
     for idx in range(0, len(score_inputs), 2):
         match_idx = idx // 2
         
-        # Lire le NOM des équipes (elles sont affichées près des inputs)
-        js_name = f"""
+        # Lire TOUS les textes du match
+        js_all_text = f"""
         const inputs = document.querySelectorAll('input');
         const input = inputs[{idx}];
         
+        // Cherche le parent
         let parent = input;
         for (let i = 0; i < 20; i++) {{
             parent = parent.parentElement;
             if (!parent) break;
         }}
         
-        const text = parent.textContent;
-        const lines = text.split('\\n').map(l => l.trim()).filter(l => l.length > 0 && !l.includes('%'));
+        const fullText = parent.innerText;
+        const lines = fullText.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
         
-        // Les noms sont généralement à la fin (après les %)
-        return lines.slice(-2);
-        """
-        
-        # Lire les %
-        js_pcts = f"""
-        const inputs = document.querySelectorAll('input');
-        const input = inputs[{idx}];
-        
-        let parent = input;
-        for (let i = 0; i < 15; i++) {{
-            parent = parent.parentElement;
-            if (!parent) break;
-            const text = parent.textContent;
-            if (text.includes('%') && text.length < 500) {{
-                break;
-            }}
-        }}
-        
-        if (!parent) parent = input.parentElement;
-        
-        const elements = parent.querySelectorAll('*');
-        const percentElements = [];
-        
-        elements.forEach(el => {{
-            try {{
-                const text = (el.innerText || el.textContent || '').trim();
-                if (/^\\d{{1,3}}%$/.test(text) && text.length <= 5) {{
-                    percentElements.push(parseInt(text));
-                }}
-            }} catch (e) {{}}
-        }});
-        
-        return percentElements.slice(0, 3);
+        return lines;
         """
         
         try:
-            lines = driver.execute_script(js_name)
-            pcts = driver.execute_script(js_pcts)
+            all_text = driver.execute_script(js_all_text)
             
-            # Afficher le nom du match
-            team_home = lines[0] if len(lines) > 0 else "?"
-            team_away = lines[1] if len(lines) > 1 else "?"
+            # Cherche les 2 premiers textes qui ne sont pas des % (ce sont probablement les noms)
+            team_names = []
+            for text in all_text:
+                if '%' not in text and len(text) > 1:
+                    team_names.append(text)
+                    if len(team_names) == 2:
+                        break
+            
+            team_home = team_names[0] if len(team_names) > 0 else "?"
+            team_away = team_names[1] if len(team_names) > 1 else "?"
             match_name = f"{team_home} vs {team_away}"
+            
+            # Lire les %
+            js_pcts = f"""
+            const inputs = document.querySelectorAll('input');
+            const input = inputs[{idx}];
+            
+            let parent = input;
+            for (let i = 0; i < 15; i++) {{
+                parent = parent.parentElement;
+                if (!parent) break;
+                const text = parent.textContent;
+                if (text.includes('%') && text.length < 500) {{
+                    break;
+                }}
+            }}
+            
+            if (!parent) parent = input.parentElement;
+            
+            const elements = parent.querySelectorAll('*');
+            const percentElements = [];
+            
+            elements.forEach(el => {{
+                try {{
+                    const text = (el.innerText || el.textContent || '').trim();
+                    if (/^\\d{{1,3}}%$/.test(text) && text.length <= 5) {{
+                        percentElements.push(parseInt(text));
+                    }}
+                }} catch (e) {{}}
+            }});
+            
+            return percentElements.slice(0, 3);
+            """
+            
+            pcts = driver.execute_script(js_pcts)
             
             if len(pcts) >= 3:
                 dom_pct = pcts[0]
                 nul_pct = pcts[1]
                 ext_pct = pcts[2]
                 
-                # Prédiction de base: 1-1
                 our_home = 1
                 our_away = 1
                 
-                # Pondération 25% algo + 75% consensus
                 max_idx = pcts.index(max(pcts))
                 
                 if max_idx == 0:
                     consensus_pred = (1, 0)
-                    pred_str = "Victoire Dom"
                 elif max_idx == 1:
                     consensus_pred = (1, 1)
-                    pred_str = "Nul"
                 else:
                     consensus_pred = (0, 1)
-                    pred_str = "Victoire Ext"
                 
                 final_home = int(our_home * 0.25 + consensus_pred[0] * 0.75)
                 final_away = int(our_away * 0.25 + consensus_pred[1] * 0.75)
@@ -157,7 +160,7 @@ try:
                 print(f"      Consensus: {dom_pct}% {nul_pct}% {ext_pct}%")
                 print(f"      Pondéré: {final_home}-{final_away}{bonus_str}")
         except Exception as e:
-            print(f"   ⚠️ Match {match_idx+1}: erreur {e}")
+            print(f"   ⚠️ Match {match_idx+1}: {e}")
     
     print("\n✅ ÉTAPE 3 RÉUSSIE!")
 
