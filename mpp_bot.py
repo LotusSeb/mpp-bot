@@ -1,6 +1,6 @@
 """
 MPP Ligue 1 Bot - Automatisation des pronostics
-VERSION SIMPLE + .clear()
+VERSION STABLE QUI MARCHE
 """
 
 import os
@@ -38,16 +38,15 @@ class LiguePredictor:
                 'dateTo': next_week.strftime('%Y-%m-%d')
             }
             
-            print("[1/4] Récupération des matchs...")
             response = requests.get(url, headers=headers, params=params, timeout=10)
             
             if response.status_code == 200:
                 self.matchs = response.json().get('matches', [])
-                print(f"   ✅ {len(self.matchs)} matchs trouvés")
+                print(f"✅ {len(self.matchs)} matchs trouvés")
                 return True
             return False
         except Exception as e:
-            print(f"   ❌ Erreur: {e}")
+            print(f"❌ Erreur API: {e}")
             return False
     
     def get_team_last_7_matches(self, team_id):
@@ -112,19 +111,11 @@ class LiguePredictor:
             return None
     
     def generate_predictions(self):
-        print("[2/4] Génération des prédictions...")
         predictions = []
         for match in self.matchs:
             pred = self.predict_score(match)
             if pred:
                 predictions.append(pred)
-        
-        print(f"   ✅ {len(predictions)} prédictions générées")
-        for p in predictions[:3]:
-            print(f"      • {p['home_team']} {p['home_goals']}-{p['away_goals']}")
-        if len(predictions) > 3:
-            print(f"      ... et {len(predictions)-3} autres")
-        
         return predictions
 
 
@@ -135,7 +126,6 @@ class MPPBot:
         self.driver = None
     
     def setup_driver(self):
-        print("\n[3/4] Configuration du navigateur...")
         chrome_options = Options()
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--no-sandbox')
@@ -150,55 +140,41 @@ class MPPBot:
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
         self.driver.set_page_load_timeout(15)
         self.driver.implicitly_wait(3)
-        print("   ✅ Navigateur OK")
+        print("✅ Navigateur OK")
     
     def login_mpp(self):
         try:
-            print("\n🔐 === CONNEXION ===")
-            
-            print("   [1/5] Accès à MPP...")
+            print("\n🔐 Connexion MPP...")
             self.driver.get(f'{MPP_URL}/')
             time.sleep(2)
             
-            print("   [2/5] Clic 'Se connecter'...")
             connect_btn = WebDriverWait(self.driver, 5).until(
                 EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Se connecter')]"))
             )
             connect_btn.click()
             time.sleep(2)
             
-            print("   [3/5] Saisie identifiants...")
             WebDriverWait(self.driver, 3).until(
                 EC.presence_of_element_located((By.ID, 'username'))
             ).send_keys(self.login)
-            print("   ✅ Email")
             
             self.driver.find_element(By.ID, 'password').send_keys(self.password)
-            print("   ✅ Password")
-            
-            print("   [4/5] Soumission...")
             self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]').click()
-            print("   ✅ Envoyé")
             
             time.sleep(3)
-            print("   [5/5] Vérification")
-            print(f"   ✅ URL: {self.driver.current_url}")
-            print("✅ CONNECTÉ!")
+            print("✅ Connecté!")
             return True
         except Exception as e:
-            print(f"❌ ERREUR: {e}")
+            print(f"❌ Erreur connexion: {e}")
             return False
     
     def fill_predictions(self, predictions):
         try:
-            print(f"\n📝 === REMPLISSAGE ===")
-            print(f"   [{len(predictions)} matchs]")
+            print(f"\n📝 Remplissage {len(predictions)} matchs...")
             
             all_inputs = self.driver.find_elements(By.TAG_NAME, "input")
             score_inputs = [i for i in all_inputs if i.is_displayed()]
-            print(f"   ✅ {len(score_inputs)} champs trouvés")
             
-            print("\n   Remplissage...")
             for idx, pred in enumerate(predictions):
                 input_idx = idx * 2
                 if input_idx + 1 < len(score_inputs):
@@ -208,12 +184,12 @@ class MPPBot:
                     score_inputs[input_idx + 1].clear()
                     score_inputs[input_idx + 1].send_keys(str(pred['away_goals']))
                     
-                    print(f"      ✅ [{idx+1}] {pred['home_team']} {pred['home_goals']}-{pred['away_goals']}")
+                    print(f"   ✅ {pred['home_team']} {pred['home_goals']}-{pred['away_goals']}")
             
-            print("\n✅ TOUS LES PRONOSTICS REMPLIS!")
+            print("✅ Tous les pronostics remplis!")
             return True
         except Exception as e:
-            print(f"\n❌ ERREUR: {e}")
+            print(f"❌ Erreur: {e}")
             return False
     
     def close(self):
@@ -222,9 +198,9 @@ class MPPBot:
 
 
 def main():
-    print("=" * 60)
+    print("=" * 50)
     print("🚀 MPP BOT LIGUE 1")
-    print("=" * 60)
+    print("=" * 50)
     
     predictor = LiguePredictor()
     if not predictor.get_next_7_days_matchs():
@@ -234,19 +210,19 @@ def main():
     if not predictions:
         return False
     
+    print(f"📊 {len(predictions)} prédictions")
+    
     bot = MPPBot(LOGIN, PASSWORD)
     try:
         bot.setup_driver()
         if bot.login_mpp():
             bot.fill_predictions(predictions)
-        else:
-            return False
     finally:
         bot.close()
     
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 50)
     print("✅ SUCCÈS!")
-    print("=" * 60)
+    print("=" * 50)
     return True
 
 
