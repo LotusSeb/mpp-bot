@@ -1,5 +1,5 @@
 """
-MPP Bot - ÉTAPE 3: Prédictions - Noms CORRECTS
+MPP Bot - ÉTAPE 4: Remplir les scores
 """
 
 import os
@@ -8,8 +8,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.keys import Keys
 
-print("🚀 ÉTAPE 3: Prédictions avec noms CORRECTS")
+print("🚀 ÉTAPE 4: Remplissage des scores")
 
 chrome_options = Options()
 chrome_options.add_argument('--headless')
@@ -49,95 +50,37 @@ try:
     score_inputs = [i for i in all_inputs if i.is_displayed()]
     print(f"   ✅ {len(score_inputs)} inputs trouvés")
     
-    js_all_text = """
-    const inputs = document.querySelectorAll('input');
-    const input = inputs[0];
+    # Les scores à remplir
+    scores = [
+        {"match": "Angers SCO vs LOSC", "home": 0, "away": 2},
+        {"match": "Havre AC vs AS Monaco", "home": 0, "away": 1},
+        {"match": "Rennes vs Paris SG", "home": 0, "away": 1}
+    ]
     
-    let parent = input;
-    for (let i = 0; i < 20; i++) {
-        parent = parent.parentElement;
-        if (!parent) break;
-    }
-    
-    const fullText = parent.innerText;
-    const lines = fullText.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
-    
-    return lines;
-    """
-    
-    all_text = driver.execute_script(js_all_text)
-    
-    print("\n📊 Calcul des prédictions...")
-    match_count = 0
-    
-    for i in range(len(all_text)):
-        # Cherche "J." pour trouver le 1er club
-        if all_text[i].startswith('J.'):
-            # Le club est juste avant
-            team_home = all_text[i-1]
+    print("\n📝 Remplissage des scores...")
+    for idx, score in enumerate(scores):
+        input_idx = idx * 2
+        
+        if input_idx + 1 < len(score_inputs):
+            print(f"\n   Match {idx+1}: {score['match']}")
             
-            # Cherche le 3e % (vient après)
-            pct_count = 0
-            pct1_idx = None
-            pct2_idx = None
-            pct3_idx = None
+            # Remplir le score home
+            print(f"      Remplissage home: {score['home']}")
+            score_inputs[input_idx].click()
+            time.sleep(0.1)
+            score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
+            score_inputs[input_idx].send_keys(str(score['home']))
+            print(f"      ✅ Home rempli")
             
-            for j in range(i, len(all_text)):
-                if '%' in all_text[j]:
-                    pct_count += 1
-                    if pct_count == 1:
-                        pct1_idx = j
-                    elif pct_count == 2:
-                        pct2_idx = j
-                    elif pct_count == 3:
-                        pct3_idx = j
-                        break
-            
-            if pct3_idx and pct3_idx + 2 < len(all_text):
-                # Le 2e mot après le 3e % 
-                team_away = all_text[pct3_idx + 2]
-                
-                pct1 = int(all_text[pct1_idx].rstrip('%'))
-                pct2 = int(all_text[pct2_idx].rstrip('%'))
-                pct3 = int(all_text[pct3_idx].rstrip('%'))
-                pcts = [pct1, pct2, pct3]
-                
-                match_name = f"{team_home} vs {team_away}"
-                
-                our_home = 1
-                our_away = 1
-                max_idx = pcts.index(max(pcts))
-                
-                if max_idx == 0:
-                    consensus_pred = (1, 0)
-                elif max_idx == 1:
-                    consensus_pred = (1, 1)
-                else:
-                    consensus_pred = (0, 1)
-                
-                final_home = int(our_home * 0.25 + consensus_pred[0] * 0.75)
-                final_away = int(our_away * 0.25 + consensus_pred[1] * 0.75)
-                
-                bonus_str = ""
-                if max(pcts) > 80:
-                    bonus_str = " (+1 bonus)"
-                    if max_idx == 0:
-                        final_home += 1
-                    elif max_idx == 1:
-                        final_home += 1
-                        final_away += 1
-                    else:
-                        final_away += 1
-                
-                print(f"   ✅ {match_name}")
-                print(f"      Consensus: {pct1}% {pct2}% {pct3}%")
-                print(f"      Pondéré: {final_home}-{final_away}{bonus_str}")
-                
-                match_count += 1
-                if match_count >= 3:
-                    break
+            # Remplir le score away
+            print(f"      Remplissage away: {score['away']}")
+            score_inputs[input_idx + 1].click()
+            time.sleep(0.1)
+            score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
+            score_inputs[input_idx + 1].send_keys(str(score['away']))
+            print(f"      ✅ Away rempli")
     
-    print("\n✅ ÉTAPE 3 RÉUSSIE!")
+    print("\n✅ ÉTAPE 4 RÉUSSIE - TOUS LES SCORES REMPLIS!")
 
 except Exception as e:
     print(f"\n❌ ERREUR: {e}")
