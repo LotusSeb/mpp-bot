@@ -362,17 +362,21 @@ class MPPBot:
                         'away_goals': final_away
                     })
                     
-                    # Clic simple comme avant (ça marchait bien!)
-                    score_inputs[input_idx].click()
-                    time.sleep(0.1)
-                    score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
-                    score_inputs[input_idx].send_keys(str(final_home))
+                    # Remplir directement via JavaScript (évite les overlays)
+                    self.driver.execute_script(f"""
+                    const inputs = document.querySelectorAll('input');
+                    inputs[{input_idx}].value = '{final_home}';
+                    inputs[{input_idx}].dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    inputs[{input_idx}].dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    """)
                     print(f"      ✅ Home: {final_home}")
                     
-                    score_inputs[input_idx + 1].click()
-                    time.sleep(0.1)
-                    score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
-                    score_inputs[input_idx + 1].send_keys(str(final_away))
+                    self.driver.execute_script(f"""
+                    const inputs = document.querySelectorAll('input');
+                    inputs[{input_idx + 1}].value = '{final_away}';
+                    inputs[{input_idx + 1}].dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    inputs[{input_idx + 1}].dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    """)
                     print(f"      ✅ Away: {final_away}")
                     print(f"      ✅ Saisi")
                     print(f"      ✅ Match rempli!")
