@@ -352,8 +352,8 @@ class MPPBot:
         
         return final_home, final_away
 
-    def send_email_predictions(self, predictions, match_names):
-        """Envoie un email avec un tableau des pronostics"""
+    def send_email_predictions(self, scores_in_order):
+        """Envoie un email avec un tableau des pronostics (dans l'ordre correct!)"""
         import smtplib
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
@@ -370,29 +370,21 @@ class MPPBot:
                 print("   ⚠️ Credentials Gmail manquants (GMAIL_EMAIL, GMAIL_PASSWORD)")
                 return
             
-            # Crée un dict avec les scores finaux par nom de match
-            scores_by_name = {}
-            for idx, pred in enumerate(predictions):
-                if idx < len(match_names):
-                    match_name = match_names[idx]
-                    score = f"{pred['home_goals']}-{pred['away_goals']}"
-                    scores_by_name[match_name] = score
-            
-            # Création du tableau HTML avec les scores dans le bon ordre
+            # Création du tableau HTML avec les scores dans le BON ORDRE
             html_table = "<table style='border-collapse: collapse; width: 100%;'>\n"
             html_table += "<tr style='background-color: #4CAF50; color: white;'>"
             html_table += "<th style='border: 1px solid black; padding: 8px;'>Match</th>"
             html_table += "<th style='border: 1px solid black; padding: 8px;'>Prédiction</th>"
             html_table += "</tr>\n"
             
-            for idx, match_name in enumerate(match_names[:8]):  # 8 matchs visibles
-                if match_name in scores_by_name:
-                    score = scores_by_name[match_name]
-                    color = "#f2f2f2" if idx % 2 == 0 else "white"
-                    html_table += f"<tr style='background-color: {color};'>"
-                    html_table += f"<td style='border: 1px solid black; padding: 8px;'>{match_name}</td>"
-                    html_table += f"<td style='border: 1px solid black; padding: 8px; text-align: center;'><strong>{score}</strong></td>"
-                    html_table += "</tr>\n"
+            for idx, item in enumerate(scores_in_order[:8]):
+                match_name = item['match_name']
+                score = f"{item['home_goals']}-{item['away_goals']}"
+                color = "#f2f2f2" if idx % 2 == 0 else "white"
+                html_table += f"<tr style='background-color: {color};'>"
+                html_table += f"<td style='border: 1px solid black; padding: 8px;'>{match_name}</td>"
+                html_table += f"<td style='border: 1px solid black; padding: 8px; text-align: center;'><strong>{score}</strong></td>"
+                html_table += "</tr>\n"
             
             html_table += "</table>"
             
@@ -444,15 +436,16 @@ class MPPBot:
             # Lecture du consensus PAR MATCH
             consensus_by_match = self.read_consensus_percentages_per_match(score_inputs)
             
-            # Sauvegarder les scores finaux pour l'email
-            final_predictions = []
+            # Liste pour garder les scores dans l'ordre correct (tel que remplis)
+            scores_in_order = []
             
             print("\n   [2/2] Remplissage des scores...")
             for idx, pred in enumerate(predictions):
                 input_idx = idx * 2
                 if input_idx + 1 < len(score_inputs):
+                    match_name = f"{pred['home_team']} vs {pred['away_team']}"
                     print(f"\n      Match {idx+1}:")
-                    print(f"      📋 {pred['home_team']} vs {pred['away_team']}")
+                    print(f"      📋 {match_name}")
                     print(f"      📝 Prédiction algo: {pred['home_goals']}-{pred['away_goals']}")
                     
                     # Pondère avec consensus
@@ -466,11 +459,12 @@ class MPPBot:
                     if final_home != pred['home_goals'] or final_away != pred['away_goals']:
                         print(f"      ⚖️  Pondéré 25/75: {final_home}-{final_away}")
                     
-                    # Sauvegarde le score final
-                    final_pred = pred.copy()
-                    final_pred['home_goals'] = final_home
-                    final_pred['away_goals'] = final_away
-                    final_predictions.append(final_pred)
+                    # IMPORTANT: Sauvegarde dans l'ordre exact du remplissage
+                    scores_in_order.append({
+                        'match_name': match_name,
+                        'home_goals': final_home,
+                        'away_goals': final_away
+                    })
                     
                     # Click, effacer 2 caractères avec Backspace, puis saisit
                     score_inputs[input_idx].click()
@@ -492,9 +486,8 @@ class MPPBot:
             
             print("\n✅ TOUS LES PRONOSTICS REMPLIS!")
             
-            # Envoi de l'email avec les SCORES FINAUX
-            match_names = [f"{pred['home_team']} vs {pred['away_team']}" for pred in final_predictions]
-            self.send_email_predictions(final_predictions, match_names)
+            # Envoi de l'email avec l'ordre CORRECT
+            self.send_email_predictions(scores_in_order)
             
             return True
         except Exception as e:
