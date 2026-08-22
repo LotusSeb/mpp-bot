@@ -5,6 +5,7 @@ VERSION STABLE + LOGS
 
 import os
 from datetime import datetime, timedelta
+import pandas as pd
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -352,7 +353,75 @@ class MPPBot:
         
         return final_home, final_away
 
-    def fill_predictions(self, predictions):
+    def send_email_predictions(self, predictions, match_names):
+        """Envoie un email avec un tableau des pronostics"""
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        try:
+            print("\n📧 Envoi de l'email...")
+            
+            # Credentials (depuis GitHub secrets)
+            sender_email = os.getenv('GMAIL_EMAIL')
+            sender_password = os.getenv('GMAIL_PASSWORD')
+            recipient_email = "sebsdp@yahoo.fr"
+            
+            if not sender_email or not sender_password:
+                print("   ⚠️ Credentials Gmail manquants (GMAIL_EMAIL, GMAIL_PASSWORD)")
+                return
+            
+            # Création du tableau HTML
+            html_table = "<table style='border-collapse: collapse; width: 100%;'>\n"
+            html_table += "<tr style='background-color: #4CAF50; color: white;'>"
+            html_table += "<th style='border: 1px solid black; padding: 8px;'>Match</th>"
+            html_table += "<th style='border: 1px solid black; padding: 8px;'>Prédiction</th>"
+            html_table += "</tr>\n"
+            
+            for idx, pred in enumerate(predictions[:8]):  # 8 matchs visibles
+                if idx < len(match_names):
+                    match_name = match_names[idx]
+                    score = f"{pred['home_goals']}-{pred['away_goals']}"
+                    color = "#f2f2f2" if idx % 2 == 0 else "white"
+                    html_table += f"<tr style='background-color: {color};'>"
+                    html_table += f"<td style='border: 1px solid black; padding: 8px;'>{match_name}</td>"
+                    html_table += f"<td style='border: 1px solid black; padding: 8px; text-align: center;'><strong>{score}</strong></td>"
+                    html_table += "</tr>\n"
+            
+            html_table += "</table>"
+            
+            # Création du message
+            msg = MIMEMultipart()
+            msg['From'] = sender_email
+            msg['To'] = recipient_email
+            msg['Subject'] = f"🏆 Pronostics Ligue 1 - {pd.Timestamp.now().strftime('%d/%m/%Y')}"
+            
+            body = f"""
+            <html>
+                <body style='font-family: Arial, sans-serif;'>
+                    <h2>📊 Pronostics Ligue 1 - Semaine {pd.Timestamp.now().isocalendar()[1]}</h2>
+                    <p>Voici les pronostics générés automatiquement:</p>
+                    {html_table}
+                    <p style='margin-top: 20px; font-size: 12px; color: #666;'>
+                        <em>Pondération: 25% algorithme + 75% consensus des parieurs</em><br>
+                        <em>Bonus: +1 but si consensus > 80%</em>
+                    </p>
+                </body>
+            </html>
+            """
+            
+            msg.attach(MIMEText(body, 'html'))
+            
+            # Envoi
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(sender_email, sender_password)
+                server.send_message(msg)
+            
+            print(f"   ✅ Email envoyé à {recipient_email}")
+        except Exception as e:
+            print(f"   ❌ Erreur email: {e}")
+            import traceback
+            traceback.print_exc()
         try:
             print(f"\n📝 === REMPLISSAGE ===")
             print(f"   [{len(predictions)} matchs à remplir]")
@@ -405,6 +474,10 @@ class MPPBot:
                     print(f"      ⚠️ Pas assez d'inputs pour match {idx+1}")
             
             print("\n✅ TOUS LES PRONOSTICS REMPLIS!")
+        
+        # Envoi de l'email
+        match_names = [f"{pred['home_team']} vs {pred['away_team']}" for pred in predictions]
+        self.send_email_predictions(predictions, match_names)
             return True
         except Exception as e:
             print(f"\n❌ ERREUR REMPLISSAGE: {e}")
