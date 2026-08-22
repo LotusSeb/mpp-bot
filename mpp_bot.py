@@ -150,6 +150,38 @@ class MPPBot:
         self.password = password
         self.driver = None
     
+    def close_ads(self):
+        """Ferme les pop-ups publicitaires"""
+        try:
+            ad_close_selectors = [
+                'button[aria-label="Close"]',
+                'button[class*="close"]',
+                'button[class*="ad-close"]',
+                '.ad-close-btn',
+                '[id*="ad-close"]',
+            ]
+            
+            for selector in ad_close_selectors:
+                try:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for element in elements:
+                        if element.is_displayed():
+                            element.click()
+                            time.sleep(0.5)
+                except:
+                    pass
+            
+            # Supprime les iframes pub
+            try:
+                iframes = self.driver.find_elements(By.TAG_NAME, 'iframe')
+                for iframe in iframes:
+                    if 'ad' in (iframe.get_attribute('id') or '').lower():
+                        self.driver.execute_script("arguments[0].remove();", iframe)
+            except:
+                pass
+        except:
+            pass
+    
     def setup_driver(self):
         """Configure le navigateur Chromium"""
         chrome_options = Options()
@@ -184,12 +216,42 @@ class MPPBot:
             self.driver.get(f'{MPP_URL}/')
             time.sleep(3)
             
+            # Ferme les pubs
+            self.close_ads()
+            time.sleep(1)
+            
+            print("🔄 Recherche du bouton 'Se connecter'...")
+            # Essaie plusieurs façons de trouver le bouton
+            connect_btn = None
+            selectors = [
+                (By.XPATH, "//button[contains(text(), 'Se connecter')]"),
+                (By.XPATH, "//*[text()='Se connecter']"),
+                (By.XPATH, "//button[contains(., 'Se connecter')]"),
+            ]
+            
+            for selector in selectors:
+                try:
+                    connect_btn = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable(selector)
+                    )
+                    print(f"✅ Trouvé avec: {selector}")
+                    break
+                except:
+                    continue
+            
+            if not connect_btn:
+                print("❌ Bouton 'Se connecter' non trouvé")
+                # Affiche tous les boutons
+                buttons = self.driver.find_elements(By.TAG_NAME, "button")
+                print(f"Boutons trouvés: {len(buttons)}")
+                for btn in buttons[:5]:
+                    print(f"  - '{btn.text}'")
+                raise Exception("Bouton 'Se connecter' introuvable")
+            
             print("🔄 Clic sur 'Se connecter'...")
-            connect_btn = WebDriverWait(self.driver, 3).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Se connecter')]"))
-            )
             connect_btn.click()
-            time.sleep(3)
+            print("🔄 Attente de l'ouverture du formulaire...")
+            time.sleep(5)
             
             print("🔄 Saisie identifiants...")
             # Cherche le champ username (Auth0)
@@ -218,6 +280,9 @@ class MPPBot:
     def fill_predictions(self, predictions):
         """Remplit les pronostics"""
         try:
+            self.close_ads()
+            time.sleep(1)
+
             print("🔄 Recherche des champs de score...")
             
             # Trouve tous les inputs sur la page
