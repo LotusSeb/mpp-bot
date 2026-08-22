@@ -169,28 +169,26 @@ class MPPBot:
             self.driver.get(f'{MPP_URL}/')
             print(f"   ✅ Page chargée: {self.driver.current_url}")
             
-            print("   ⏳ Attente 3 sec pour chargement JS...")
+            print("   ⏳ Attente 10 sec pour chargement JS...")
             time.sleep(10)
             print("   ✅ Page stabilisée")
             
             print("   [2/5] Recherche du bouton 'Se connecter'...")
             all_buttons = self.driver.find_elements(By.TAG_NAME, "button")
             print(f"   📊 {len(all_buttons)} boutons trouvés")
-            for i, btn in enumerate(all_buttons[:5]):
-                print(f"      [{i}] {btn.text}")
             
-            print("   🔍 WebDriverWait bouton 'Se connecter'...")
-            print("   📋 Détails des boutons:")
+            print("   🔍 Cherche le bouton avec du texte...")
+            connect_btn = None
             for i, btn in enumerate(all_buttons):
-                print(f"      Button {i}:")
-                print(f"         text: '{btn.text}'")
-                print(f"         tag_name: {btn.tag_name}")
-                print(f"         innerHTML: {btn.get_attribute('innerHTML')}")
+                print(f"      Button {i}: text='{btn.text}'")
+                if btn.text and 'connecter' in btn.text.lower():
+                    connect_btn = btn
+                    print(f"   ✅ Bouton trouvé: '{btn.text}'")
+                    break
             
-            connect_btn = WebDriverWait(self.driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Se connecter')]"))
-            )
-            print("   ✅ Bouton trouvé!")
+            if not connect_btn:
+                print("   ❌ Bouton pas trouvé!")
+                return False
             
             print("   [3/5] Clic sur 'Se connecter'...")
             connect_btn.click()
