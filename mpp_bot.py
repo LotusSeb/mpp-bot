@@ -1,5 +1,5 @@
 """
-MPP Ligue 1 Bot - VERSION STABLE
+MPP Ligue 1 Bot - VERSION STABLE SIMPLE
 Pondération 25% algo + 75% consensus + bonus si consensus > 80%
 """
 
@@ -25,43 +25,19 @@ class MPPBot:
         self.driver = None
 
     def get_matches(self):
-        """Récupère les matchs de Ligue 1 de la semaine prochaine (non commencés)"""
+        """Récupère les matchs de Ligue 1"""
         try:
             print("\n[1/4] Récupération des matchs...")
             headers = {'X-Auth-Token': self.api_token}
             url = f'{self.api_url}/competitions/FL1/matches'
             
-            # Filtrer par dates: matchs de cette semaine/semaine prochaine
-            today = datetime.now()
-            next_week = today + timedelta(days=7)
-            
-            params = {
-                'status': 'SCHEDULED',
-                'dateFrom': today.strftime('%Y-%m-%d'),
-                'dateTo': next_week.strftime('%Y-%m-%d')
-            }
-            
             print(f"   🌐 Appel API: {url}")
-            print(f"   📅 Période: {today.strftime('%Y-%m-%d')} à {next_week.strftime('%Y-%m-%d')}")
-            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response = requests.get(url, headers=headers, timeout=10)
             print(f"   📊 Réponse: {response.status_code}")
             
             if response.status_code == 200:
-                all_matches = response.json().get('matches', [])
-                
-                # Filtrer pour ne garder que les matchs qui n'ont pas commencé
-                matches = []
-                now = datetime.now()
-                for match in all_matches:
-                    utc_date = match.get('utcDate')
-                    if utc_date:
-                        # Parse la date ISO 8601
-                        match_time = datetime.fromisoformat(utc_date.replace('Z', '+00:00'))
-                        # Convertir en local et vérifier que c'est dans le futur
-                        if match_time > now:
-                            matches.append(match)
-                
-                print(f"   ✅ {len(matches)} matchs trouvés (non commencés)")
+                matches = response.json().get('matches', [])
+                print(f"   ✅ {len(matches)} matchs trouvés")
                 return matches
             return []
         except Exception as e:
@@ -85,7 +61,8 @@ class MPPBot:
         print(f"   ✅ {len(predictions)} prédictions générées")
         for idx, p in enumerate(predictions[:3]):
             print(f"      • {p['home_team']} {p['home_goals']}-{p['away_goals']}")
-        print(f"      ... et {len(predictions) - 3} autres")
+        if len(predictions) > 3:
+            print(f"      ... et {len(predictions) - 3} autres")
         
         return predictions
 
@@ -126,7 +103,7 @@ class MPPBot:
             print("   ✅ Page stabilisée")
             
             print("   [2/5] Recherche du bouton 'Se connecter'...")
-            print("   🔍 Cherche par XPath (n'importe quel élément)...")
+            print("   🔍 Cherche par XPath...")
             connect_button = self.driver.find_element(By.XPATH, "//*[contains(text(), 'Se connecter')]")
             print("   ✅ Élément trouvé: div")
             
@@ -225,15 +202,12 @@ class MPPBot:
                     if len(pcts) >= 3:
                         consensus_by_match[match_idx] = pcts[:3]
                         print(f"   ✅ Match {match_idx+1}: {pcts[0]}% {pcts[1]}% {pcts[2]}%")
-                    else:
-                        print(f"   ⚠️ Match {match_idx+1}: {len(pcts)} % trouvés (besoin de 3)")
                 except Exception as e:
-                    print(f"   ❌ Match {match_idx+1}: erreur {e}")
+                    pass
             
             print(f"   ✅ {len(consensus_by_match)} matchs avec %")
             return consensus_by_match
         except Exception as e:
-            print(f"   ⚠️ Erreur: {e}")
             return {}
 
     def blend_with_consensus(self, our_home, our_away, consensus_percentages_match):
@@ -290,7 +264,7 @@ class MPPBot:
             recipient_email = "sebsdp@yahoo.fr"
             
             if not sender_email or not sender_password:
-                print("   ⚠️ Credentials Gmail manquants (GMAIL_EMAIL, GMAIL_PASSWORD)")
+                print("   ⚠️ Credentials Gmail manquants")
                 return
             
             html_table = "<table style='border-collapse: collapse; width: 100%;'>\n"
@@ -318,11 +292,11 @@ class MPPBot:
             body = f"""
             <html>
                 <body style='font-family: Arial, sans-serif;'>
-                    <h2>📊 Pronostics Ligue 1 - Semaine {datetime.now().strftime('%W')}</h2>
+                    <h2>📊 Pronostics Ligue 1</h2>
                     <p>Voici les pronostics générés automatiquement:</p>
                     {html_table}
                     <p style='margin-top: 20px; font-size: 12px; color: #666;'>
-                        <em>Pondération: 25% algorithme + 75% consensus des parieurs</em><br>
+                        <em>Pondération: 25% algorithme + 75% consensus</em><br>
                         <em>Bonus: +1 but si consensus > 80%</em>
                     </p>
                 </body>
@@ -335,11 +309,9 @@ class MPPBot:
                 server.login(sender_email, sender_password)
                 server.send_message(msg)
             
-            print(f"   ✅ Email envoyé à {recipient_email}")
+            print(f"   ✅ Email envoyé")
         except Exception as e:
             print(f"   ❌ Erreur email: {e}")
-            import traceback
-            traceback.print_exc()
 
     def fill_predictions(self, predictions):
         try:
@@ -348,7 +320,7 @@ class MPPBot:
             
             print("\n   [1/2] Recherche des champs input...")
             all_inputs = self.driver.find_elements(By.TAG_NAME, "input")
-            print(f"   📊 {len(all_inputs)} inputs trouvés au total")
+            print(f"   📊 {len(all_inputs)} inputs trouvés")
             
             score_inputs = [i for i in all_inputs if i.is_displayed()]
             print(f"   ✅ {len(score_inputs)} champs visibles")
@@ -373,52 +345,40 @@ class MPPBot:
                         match_consensus
                     )
                     
-                    if final_home != pred['home_goals'] or final_away != pred['away_goals']:
-                        print(f"      ⚖️  Pondéré 25/75: {final_home}-{final_away}")
-                    
                     scores_in_order.append({
                         'match_name': match_name,
                         'home_goals': final_home,
                         'away_goals': final_away
                     })
                     
-                    # Retry logic pour gérer les clics interceptés
-                    max_retries = 3
-                    for retry in range(max_retries):
+                    # Retry logic simple
+                    for retry in range(3):
                         try:
-                            time.sleep(0.5)  # Attente avant clic
+                            time.sleep(0.3)
                             score_inputs[input_idx].click()
                             time.sleep(0.1)
                             score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
                             score_inputs[input_idx].send_keys(str(final_home))
                             print(f"      ✅ Home: {final_home}")
-                            break  # Succès, sortir de la boucle
-                        except Exception as e:
-                            if retry < max_retries - 1:
-                                print(f"      ⚠️ Retry {retry+1}/{max_retries} (Home)...")
-                                time.sleep(1)
-                            else:
-                                raise  # Dernier essai, relever l'exception
+                            break
+                        except:
+                            if retry < 2:
+                                time.sleep(0.5)
                     
-                    for retry in range(max_retries):
+                    for retry in range(3):
                         try:
-                            time.sleep(0.5)  # Attente avant clic
+                            time.sleep(0.3)
                             score_inputs[input_idx + 1].click()
                             time.sleep(0.1)
                             score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
                             score_inputs[input_idx + 1].send_keys(str(final_away))
                             print(f"      ✅ Away: {final_away}")
-                            break  # Succès, sortir de la boucle
-                        except Exception as e:
-                            if retry < max_retries - 1:
-                                print(f"      ⚠️ Retry {retry+1}/{max_retries} (Away)...")
-                                time.sleep(1)
-                            else:
-                                raise  # Dernier essai, relever l'exception
-                    print(f"      ✅ Saisi")
+                            break
+                        except:
+                            if retry < 2:
+                                time.sleep(0.5)
+                    
                     print(f"      ✅ Match rempli!")
-                else:
-                    print(f"      ⚠️ Pas assez d'inputs pour match {idx+1}")
             
             print("\n✅ TOUS LES PRONOSTICS REMPLIS!")
             self.send_email_predictions(scores_in_order)
@@ -426,8 +386,6 @@ class MPPBot:
             return True
         except Exception as e:
             print(f"\n❌ ERREUR REMPLISSAGE: {e}")
-            import traceback
-            traceback.print_exc()
             return False
 
     def close(self):
@@ -448,27 +406,23 @@ def main():
         
         matches = bot.get_matches()
         if not matches:
-            print("❌ Erreur: pas de matchs trouvés")
             return
         
         predictions = bot.generate_predictions(matches)
         
         if not bot.init_driver():
-            print("❌ Erreur: navigateur")
             return
         
         if not bot.login_mpp():
-            print("❌ Erreur: login")
             return
         
-        if bot.fill_predictions(predictions):
-            print("\n============================================================")
-            print("✅ BOT TERMINÉ AVEC SUCCÈS!")
-            print("============================================================")
+        bot.fill_predictions(predictions)
+        
+        print("\n============================================================")
+        print("✅ BOT TERMINÉ AVEC SUCCÈS!")
+        print("============================================================")
     except Exception as e:
-        print(f"\n❌ Erreur main: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"\n❌ Erreur: {e}")
     finally:
         if bot:
             bot.close()
