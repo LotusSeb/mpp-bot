@@ -358,12 +358,19 @@ class MPPBot:
                         'away_goals': final_away
                     })
                     
+                    # Attendre que l'input soit clickable
+                    WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.TAG_NAME, "input"))
+                    )
+                    time.sleep(0.2)
+                    
                     score_inputs[input_idx].click()
                     time.sleep(0.1)
                     score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
                     score_inputs[input_idx].send_keys(str(final_home))
                     print(f"      ✅ Home: {final_home}")
                     
+                    time.sleep(0.2)
                     score_inputs[input_idx + 1].click()
                     time.sleep(0.1)
                     score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
