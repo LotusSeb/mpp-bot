@@ -257,20 +257,13 @@ class MPPBot:
                     print(f"      📋 {pred['home_team']} vs {pred['away_team']}")
                     print(f"      📝 Prédiction: {pred['home_goals']}-{pred['away_goals']}")
                     
-                    print(f"      🧹 Clear input home...")
                     score_inputs[input_idx].clear()
-                    print(f"      ✅ Cleared")
-                    
-                    print(f"      📝 Send keys home: {pred['home_goals']}")
                     score_inputs[input_idx].send_keys(str(pred['home_goals']))
-                    print(f"      ✅ Saisi")
+                    print(f"      ✅ Home: {pred['home_goals']}")
                     
-                    print(f"      🧹 Clear input away...")
                     score_inputs[input_idx + 1].clear()
-                    print(f"      ✅ Cleared")
-                    
-                    print(f"      📝 Send keys away: {pred['away_goals']}")
                     score_inputs[input_idx + 1].send_keys(str(pred['away_goals']))
+                    print(f"      ✅ Away: {pred['away_goals']}")
                     print(f"      ✅ Saisi")
                     
                     print(f"      ✅ Match rempli!")
