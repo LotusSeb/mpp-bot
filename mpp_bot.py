@@ -1,5 +1,5 @@
 """
-MPP Bot - ÉTAPE 3: Prédictions - Filtrer les VRAIS noms
+MPP Bot - ÉTAPE 3: Prédictions - Noms CORRECTS
 """
 
 import os
@@ -9,9 +9,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
-print("🚀 ÉTAPE 3: Prédictions avec noms")
+print("🚀 ÉTAPE 3: Prédictions avec noms CORRECTS")
 
-# Config Chromium
 chrome_options = Options()
 chrome_options.add_argument('--headless')
 chrome_options.add_argument('--no-sandbox')
@@ -22,7 +21,6 @@ service = Service('/usr/bin/chromedriver')
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
 try:
-    # Connexion à MPP
     print("   🌐 Connexion...")
     driver.get('https://mpp.football/')
     time.sleep(10)
@@ -47,12 +45,10 @@ try:
     time.sleep(5)
     print("   ✅ Connecté")
     
-    # Chercher les inputs
     all_inputs = driver.find_elements(By.TAG_NAME, "input")
     score_inputs = [i for i in all_inputs if i.is_displayed()]
     print(f"   ✅ {len(score_inputs)} inputs trouvés")
     
-    # Récupère TOUS les textes
     js_all_text = """
     const inputs = document.querySelectorAll('input');
     const input = inputs[0];
@@ -71,77 +67,75 @@ try:
     
     all_text = driver.execute_script(js_all_text)
     
-    # Filtre pour garder JUSTE les noms d'équipes
-    # = textes avec des lettres, pas de %, pas d'horaire, pas de nombres seuls
-    exclusions = ['Créer', 'Rejoindre', 'Importer', 'Afficher', 'stats', 'Dimanche', 'août', 'J.1', '-', 'Activer', 'bonus', 'McDo', 'Ligue', 'compétition', 'Nouvelle']
-    
-    team_names = []
-    for text in all_text:
-        # Vérifie que c'est un vrai nom
-        if ('%' not in text and 
-            ':' not in text and  # Pas d'horaire
-            not text.replace('.', '').isdigit() and  # Pas de nombre
-            any(c.isalpha() for c in text) and  # Au moins une lettre
-            text not in exclusions and
-            len(text) > 2):
-            team_names.append(text)
-    
-    # Lire les % pour chaque match
     print("\n📊 Calcul des prédictions...")
     match_count = 0
-    for i in range(0, len(all_text), 5):
-        if match_count >= 3:
-            break
-        
-        text = all_text[i]
-        
-        # Cherche les 3 %
-        if '%' in text:
-            try:
-                pct1 = int(text.rstrip('%'))
-                pct2 = int(all_text[i+2].rstrip('%'))
-                pct3 = int(all_text[i+4].rstrip('%'))
+    
+    for i in range(len(all_text)):
+        # Cherche "J." pour trouver le 1er club
+        if all_text[i].startswith('J.'):
+            # Le club est juste avant
+            team_home = all_text[i-1]
+            
+            # Cherche le 3e % (vient après)
+            pct_count = 0
+            pct1_idx = None
+            pct2_idx = None
+            pct3_idx = None
+            
+            for j in range(i, len(all_text)):
+                if '%' in all_text[j]:
+                    pct_count += 1
+                    if pct_count == 1:
+                        pct1_idx = j
+                    elif pct_count == 2:
+                        pct2_idx = j
+                    elif pct_count == 3:
+                        pct3_idx = j
+                        break
+            
+            if pct3_idx and pct3_idx + 2 < len(all_text):
+                # Le 2e mot après le 3e % 
+                team_away = all_text[pct3_idx + 2]
+                
+                pct1 = int(all_text[pct1_idx].rstrip('%'))
+                pct2 = int(all_text[pct2_idx].rstrip('%'))
+                pct3 = int(all_text[pct3_idx].rstrip('%'))
                 pcts = [pct1, pct2, pct3]
                 
-                # Prend les noms correspondants
-                if match_count < len(team_names) - 1:
-                    team_home = team_names[match_count * 2]
-                    team_away = team_names[match_count * 2 + 1]
-                    match_name = f"{team_home} vs {team_away}"
-                    
-                    # Prédiction de base: 1-1
-                    our_home = 1
-                    our_away = 1
-                    max_idx = pcts.index(max(pcts))
-                    
+                match_name = f"{team_home} vs {team_away}"
+                
+                our_home = 1
+                our_away = 1
+                max_idx = pcts.index(max(pcts))
+                
+                if max_idx == 0:
+                    consensus_pred = (1, 0)
+                elif max_idx == 1:
+                    consensus_pred = (1, 1)
+                else:
+                    consensus_pred = (0, 1)
+                
+                final_home = int(our_home * 0.25 + consensus_pred[0] * 0.75)
+                final_away = int(our_away * 0.25 + consensus_pred[1] * 0.75)
+                
+                bonus_str = ""
+                if max(pcts) > 80:
+                    bonus_str = " (+1 bonus)"
                     if max_idx == 0:
-                        consensus_pred = (1, 0)
+                        final_home += 1
                     elif max_idx == 1:
-                        consensus_pred = (1, 1)
+                        final_home += 1
+                        final_away += 1
                     else:
-                        consensus_pred = (0, 1)
-                    
-                    final_home = int(our_home * 0.25 + consensus_pred[0] * 0.75)
-                    final_away = int(our_away * 0.25 + consensus_pred[1] * 0.75)
-                    
-                    bonus_str = ""
-                    if max(pcts) > 80:
-                        bonus_str = " (+1 bonus)"
-                        if max_idx == 0:
-                            final_home += 1
-                        elif max_idx == 1:
-                            final_home += 1
-                            final_away += 1
-                        else:
-                            final_away += 1
-                    
-                    print(f"   ✅ {match_name}")
-                    print(f"      Consensus: {pct1}% {pct2}% {pct3}%")
-                    print(f"      Pondéré: {final_home}-{final_away}{bonus_str}")
-                    
-                    match_count += 1
-            except:
-                pass
+                        final_away += 1
+                
+                print(f"   ✅ {match_name}")
+                print(f"      Consensus: {pct1}% {pct2}% {pct3}%")
+                print(f"      Pondéré: {final_home}-{final_away}{bonus_str}")
+                
+                match_count += 1
+                if match_count >= 3:
+                    break
     
     print("\n✅ ÉTAPE 3 RÉUSSIE!")
 
