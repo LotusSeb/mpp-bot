@@ -1,5 +1,5 @@
 """
-MPP Ligue 1 Bot - Automatisation des pronostics
+MPP Ligue 1 Bot - VERSION STABLE
 Pondération 25% algo + 75% consensus + bonus si consensus > 80%
 """
 
@@ -23,7 +23,6 @@ class MPPBot:
         self.mpp_login = os.environ.get('MPP_LOGIN', 'sebsdp@yahoo.fr')
         self.mpp_password = os.environ.get('MPP_PASSWORD', 'Football99@')
         self.driver = None
-        self.consensus = {}
 
     def get_matches(self):
         """Récupère les matchs de Ligue 1"""
@@ -211,8 +210,6 @@ class MPPBot:
             return consensus_by_match
         except Exception as e:
             print(f"   ⚠️ Erreur: {e}")
-            import traceback
-            traceback.print_exc()
             return {}
 
     def blend_with_consensus(self, our_home, our_away, consensus_percentages_match):
@@ -254,7 +251,6 @@ class MPPBot:
         print(f"      ⚖️  Pondération 25/75: {consensus_pred_str} → {final_home}-{final_away}{bonus_str}")
         
         return final_home, final_away
-
 
     def send_email_predictions(self, scores_in_order):
         """Envoie un email avec un tableau des pronostics"""
@@ -362,21 +358,16 @@ class MPPBot:
                         'away_goals': final_away
                     })
                     
-                    # Remplir directement via JavaScript (évite les overlays)
-                    self.driver.execute_script(f"""
-                    const inputs = document.querySelectorAll('input');
-                    inputs[{input_idx}].value = '{final_home}';
-                    inputs[{input_idx}].dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    inputs[{input_idx}].dispatchEvent(new Event('change', {{ bubbles: true }}));
-                    """)
+                    score_inputs[input_idx].click()
+                    time.sleep(0.1)
+                    score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
+                    score_inputs[input_idx].send_keys(str(final_home))
                     print(f"      ✅ Home: {final_home}")
                     
-                    self.driver.execute_script(f"""
-                    const inputs = document.querySelectorAll('input');
-                    inputs[{input_idx + 1}].value = '{final_away}';
-                    inputs[{input_idx + 1}].dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    inputs[{input_idx + 1}].dispatchEvent(new Event('change', {{ bubbles: true }}));
-                    """)
+                    score_inputs[input_idx + 1].click()
+                    time.sleep(0.1)
+                    score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
+                    score_inputs[input_idx + 1].send_keys(str(final_away))
                     print(f"      ✅ Away: {final_away}")
                     print(f"      ✅ Saisi")
                     print(f"      ✅ Match rempli!")
