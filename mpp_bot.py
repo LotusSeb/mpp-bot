@@ -244,21 +244,38 @@ class MPPBot:
     
 
     def read_consensus_percentages(self):
-        """Lit les % des autres parieurs sur la page"""
+        """Lit les % des autres parieurs"""
         try:
             print("\n📊 Lecture du consensus...")
-            import re
-            page_text = self.driver.page_source
             
-            # Cherche tous les pourcentages
-            percentages = re.findall(r'(\d+)%', page_text)
-            print(f"   ✅ {len(percentages)} pourcentages trouvés")
-            if percentages:
-                print(f"   📈 Exemples: {percentages[:10]}")
+            # Cherche les éléments qui affichent JUSTE des % (ex: "55%", "4%")
+            js_code = """
+            const elements = document.querySelectorAll('*');
+            const percentElements = [];
             
-            return percentages
+            elements.forEach(el => {
+                const text = el.textContent.trim();
+                if (/^\\d+%$/.test(text)) {
+                    percentElements.push({
+                        value: parseInt(text),
+                        text: text
+                    });
+                }
+            });
+            
+            return percentElements;
+            """
+            
+            results = self.driver.execute_script(js_code)
+            
+            print(f"   ✅ {len(results)} éléments avec juste des %")
+            if results:
+                values = [r['value'] for r in results[:20]]
+                print(f"      Premier 20: {values}")
+            
+            return results
         except Exception as e:
-            print(f"   ⚠️ Erreur lecture consensus: {e}")
+            print(f"   ⚠️ Erreur: {e}")
             return []
 
     def fill_predictions(self, predictions):
