@@ -1,5 +1,5 @@
 """
-MPP Bot - ÉTAPE 4: Remplir les scores avec RETRY
+MPP Bot - ÉTAPE 4: Remplissage via JavaScript
 """
 
 import os
@@ -8,9 +8,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.keys import Keys
 
-print("🚀 ÉTAPE 4: Remplissage des scores")
+print("🚀 ÉTAPE 4: Remplissage via JavaScript")
 
 chrome_options = Options()
 chrome_options.add_argument('--headless')
@@ -63,46 +62,25 @@ try:
         if input_idx + 1 < len(score_inputs):
             print(f"\n   Match {idx+1}: {score['match']}")
             
-            # Remplir home avec RETRY
-            success = False
-            for retry in range(3):
-                try:
-                    time.sleep(0.8)  # Attendre plus longtemps
-                    score_inputs[input_idx].click()
-                    time.sleep(0.1)
-                    score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
-                    score_inputs[input_idx].send_keys(str(score['home']))
-                    print(f"      ✅ Home: {score['home']}")
-                    success = True
-                    break
-                except:
-                    if retry < 2:
-                        print(f"      ⚠️ Retry home {retry+1}...")
-                        time.sleep(1)
+            # Remplir home via JavaScript
+            js_home = f"""
+            const inputs = document.querySelectorAll('input');
+            inputs[{input_idx}].value = '{score['home']}';
+            inputs[{input_idx}].dispatchEvent(new Event('input', {{ bubbles: true }}));
+            inputs[{input_idx}].dispatchEvent(new Event('change', {{ bubbles: true }}));
+            """
+            driver.execute_script(js_home)
+            print(f"      ✅ Home: {score['home']}")
             
-            if not success:
-                print(f"      ❌ Impossible de remplir home")
-                continue
-            
-            # Remplir away avec RETRY
-            success = False
-            for retry in range(3):
-                try:
-                    time.sleep(0.8)
-                    score_inputs[input_idx + 1].click()
-                    time.sleep(0.1)
-                    score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
-                    score_inputs[input_idx + 1].send_keys(str(score['away']))
-                    print(f"      ✅ Away: {score['away']}")
-                    success = True
-                    break
-                except:
-                    if retry < 2:
-                        print(f"      ⚠️ Retry away {retry+1}...")
-                        time.sleep(1)
-            
-            if not success:
-                print(f"      ❌ Impossible de remplir away")
+            # Remplir away via JavaScript
+            js_away = f"""
+            const inputs = document.querySelectorAll('input');
+            inputs[{input_idx + 1}].value = '{score['away']}';
+            inputs[{input_idx + 1}].dispatchEvent(new Event('input', {{ bubbles: true }}));
+            inputs[{input_idx + 1}].dispatchEvent(new Event('change', {{ bubbles: true }}));
+            """
+            driver.execute_script(js_away)
+            print(f"      ✅ Away: {score['away']}")
     
     print("\n✅ ÉTAPE 4 RÉUSSIE!")
 
