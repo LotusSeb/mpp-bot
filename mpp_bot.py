@@ -1,5 +1,5 @@
 """
-MPP Bot - ÉTAPE 3: Prédictions et pondération + NOMS
+MPP Bot - ÉTAPE 3: Prédictions avec VRAIS noms
 """
 
 import os
@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
-print("🚀 ÉTAPE 3: Prédictions avec noms des matchs")
+print("🚀 ÉTAPE 3: Prédictions avec VRAIS noms")
 
 # Config Chromium
 chrome_options = Options()
@@ -53,26 +53,27 @@ try:
     score_inputs = [i for i in all_inputs if i.is_displayed()]
     print(f"   ✅ {len(score_inputs)} inputs trouvés")
     
-    # Lire les % et noms pour chaque match
+    # Lire les noms, % et faire les prédictions
     print("\n📊 Calcul des prédictions...")
     for idx in range(0, len(score_inputs), 2):
         match_idx = idx // 2
         
-        # Lire le NOM du match
+        # Lire le NOM des équipes (elles sont affichées près des inputs)
         js_name = f"""
         const inputs = document.querySelectorAll('input');
         const input = inputs[{idx}];
         
         let parent = input;
-        for (let i = 0; i < 15; i++) {{
+        for (let i = 0; i < 20; i++) {{
             parent = parent.parentElement;
             if (!parent) break;
         }}
         
         const text = parent.textContent;
-        const lines = text.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
+        const lines = text.split('\\n').map(l => l.trim()).filter(l => l.length > 0 && !l.includes('%'));
         
-        return lines.slice(0, 3);
+        // Les noms sont généralement à la fin (après les %)
+        return lines.slice(-2);
         """
         
         # Lire les %
@@ -112,7 +113,9 @@ try:
             pcts = driver.execute_script(js_pcts)
             
             # Afficher le nom du match
-            match_name = f"{lines[0]} vs {lines[1]}" if len(lines) >= 2 else "Match inconnu"
+            team_home = lines[0] if len(lines) > 0 else "?"
+            team_away = lines[1] if len(lines) > 1 else "?"
+            match_name = f"{team_home} vs {team_away}"
             
             if len(pcts) >= 3:
                 dom_pct = pcts[0]
@@ -150,7 +153,7 @@ try:
                     else:
                         final_away += 1
                 
-                print(f"   ✅ Match {match_idx+1}: {match_name}")
+                print(f"   ✅ {match_name}")
                 print(f"      Consensus: {dom_pct}% {nul_pct}% {ext_pct}%")
                 print(f"      Pondéré: {final_home}-{final_away}{bonus_str}")
         except Exception as e:
