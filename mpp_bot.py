@@ -25,19 +25,43 @@ class MPPBot:
         self.driver = None
 
     def get_matches(self):
-        """Récupère les matchs de Ligue 1"""
+        """Récupère les matchs de Ligue 1 de la semaine prochaine (non commencés)"""
         try:
             print("\n[1/4] Récupération des matchs...")
             headers = {'X-Auth-Token': self.api_token}
             url = f'{self.api_url}/competitions/FL1/matches'
             
+            # Filtrer par dates: matchs de cette semaine/semaine prochaine
+            today = datetime.now()
+            next_week = today + timedelta(days=7)
+            
+            params = {
+                'status': 'SCHEDULED',
+                'dateFrom': today.strftime('%Y-%m-%d'),
+                'dateTo': next_week.strftime('%Y-%m-%d')
+            }
+            
             print(f"   🌐 Appel API: {url}")
-            response = requests.get(url, headers=headers, timeout=10)
+            print(f"   📅 Période: {today.strftime('%Y-%m-%d')} à {next_week.strftime('%Y-%m-%d')}")
+            response = requests.get(url, headers=headers, params=params, timeout=10)
             print(f"   📊 Réponse: {response.status_code}")
             
             if response.status_code == 200:
-                matches = response.json().get('matches', [])
-                print(f"   ✅ {len(matches)} matchs trouvés")
+                all_matches = response.json().get('matches', [])
+                
+                # Filtrer pour ne garder que les matchs qui n'ont pas commencé
+                matches = []
+                now = datetime.now()
+                for match in all_matches:
+                    utc_date = match.get('utcDate')
+                    if utc_date:
+                        # Parse la date ISO 8601
+                        match_time = datetime.fromisoformat(utc_date.replace('Z', '+00:00'))
+                        # Convertir en local et vérifier que c'est dans le futur
+                        if match_time > now:
+                            matches.append(match)
+                
+                print(f"   ✅ {len(matches)} matchs trouvés (non commencés)")
                 return matches
             return []
         except Exception as e:
@@ -358,24 +382,39 @@ class MPPBot:
                         'away_goals': final_away
                     })
                     
-                    # Attendre que l'input soit clickable
-                    WebDriverWait(self.driver, 5).until(
-                        EC.element_to_be_clickable((By.TAG_NAME, "input"))
-                    )
-                    time.sleep(0.2)
+                    # Retry logic pour gérer les clics interceptés
+                    max_retries = 3
+                    for retry in range(max_retries):
+                        try:
+                            time.sleep(0.5)  # Attente avant clic
+                            score_inputs[input_idx].click()
+                            time.sleep(0.1)
+                            score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
+                            score_inputs[input_idx].send_keys(str(final_home))
+                            print(f"      ✅ Home: {final_home}")
+                            break  # Succès, sortir de la boucle
+                        except Exception as e:
+                            if retry < max_retries - 1:
+                                print(f"      ⚠️ Retry {retry+1}/{max_retries} (Home)...")
+                                time.sleep(1)
+                            else:
+                                raise  # Dernier essai, relever l'exception
                     
-                    score_inputs[input_idx].click()
-                    time.sleep(0.1)
-                    score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
-                    score_inputs[input_idx].send_keys(str(final_home))
-                    print(f"      ✅ Home: {final_home}")
-                    
-                    time.sleep(0.2)
-                    score_inputs[input_idx + 1].click()
-                    time.sleep(0.1)
-                    score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
-                    score_inputs[input_idx + 1].send_keys(str(final_away))
-                    print(f"      ✅ Away: {final_away}")
+                    for retry in range(max_retries):
+                        try:
+                            time.sleep(0.5)  # Attente avant clic
+                            score_inputs[input_idx + 1].click()
+                            time.sleep(0.1)
+                            score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
+                            score_inputs[input_idx + 1].send_keys(str(final_away))
+                            print(f"      ✅ Away: {final_away}")
+                            break  # Succès, sortir de la boucle
+                        except Exception as e:
+                            if retry < max_retries - 1:
+                                print(f"      ⚠️ Retry {retry+1}/{max_retries} (Away)...")
+                                time.sleep(1)
+                            else:
+                                raise  # Dernier essai, relever l'exception
                     print(f"      ✅ Saisi")
                     print(f"      ✅ Match rempli!")
                 else:
