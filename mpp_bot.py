@@ -25,7 +25,7 @@ class MPPBot:
         self.driver = None
 
     def get_matches(self):
-        """Récupère les matchs de Ligue 1"""
+        """Récupère les matchs de Ligue 1 non commencés"""
         try:
             print("\n[1/4] Récupération des matchs...")
             headers = {'X-Auth-Token': self.api_token}
@@ -36,8 +36,12 @@ class MPPBot:
             print(f"   📊 Réponse: {response.status_code}")
             
             if response.status_code == 200:
-                matches = response.json().get('matches', [])
-                print(f"   ✅ {len(matches)} matchs trouvés")
+                all_matches = response.json().get('matches', [])
+                
+                # Filtrer: ne garder que les matchs SCHEDULED (pas commencés)
+                matches = [m for m in all_matches if m.get('status') == 'SCHEDULED']
+                
+                print(f"   ✅ {len(matches)} matchs trouvés (non commencés)")
                 return matches
             return []
         except Exception as e:
