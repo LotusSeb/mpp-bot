@@ -247,6 +247,7 @@ class MPPBot:
         """Lit les % pour chaque match individuellement"""
         try:
             print("\n📊 Lecture du consensus par match...")
+            print(f"   Analyse {len(score_inputs)} inputs...")
             
             consensus_by_match = {}
             
@@ -259,14 +260,18 @@ class MPPBot:
                 const input = inputs[{idx}];
                 
                 // Cherche le parent commun qui contient ce match
-                let parent = input.closest('[class*="match"], [class*="card"], [class*="row"], div');
-                if (!parent || parent === document.body) {{
-                    parent = input.parentElement;
-                    for (let i = 0; i < 10; i++) {{
-                        parent = parent.parentElement;
-                        if (parent && parent.textContent.length > 100) break;
+                let parent = input;
+                for (let i = 0; i < 15; i++) {{
+                    parent = parent.parentElement;
+                    if (!parent) break;
+                    // Cherche un parent qui contient probablement le match
+                    const text = parent.textContent;
+                    if (text.includes('%') && text.length < 500) {{
+                        break;
                     }}
                 }}
+                
+                if (!parent) parent = input.parentElement;
                 
                 // Cherche les % dans ce parent
                 const elements = parent.querySelectorAll('*');
@@ -288,13 +293,18 @@ class MPPBot:
                     pcts = self.driver.execute_script(js_code)
                     if len(pcts) >= 3:
                         consensus_by_match[match_idx] = pcts[:3]
-                        print(f"   Match {match_idx+1}: {pcts[0]}% {pcts[1]}% {pcts[2]}%")
-                except:
-                    pass
+                        print(f"   ✅ Match {match_idx+1}: {pcts[0]}% {pcts[1]}% {pcts[2]}%")
+                    else:
+                        print(f"   ⚠️ Match {match_idx+1}: {len(pcts)} % trouvés (besoin de 3)")
+                except Exception as e:
+                    print(f"   ❌ Match {match_idx+1}: erreur {e}")
             
+            print(f"   ✅ {len(consensus_by_match)} matchs avec %")
             return consensus_by_match
         except Exception as e:
             print(f"   ⚠️ Erreur: {e}")
+            import traceback
+            traceback.print_exc()
             return {}
 
 
