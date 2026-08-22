@@ -421,7 +421,8 @@ class MPPBot:
             print(f"   ❌ Erreur email: {e}")
             import traceback
             traceback.print_exc()
-            
+    
+    def fill_predictions(self, predictions):
         try:
             print(f"\n📝 === REMPLISSAGE ===")
             print(f"   [{len(predictions)} matchs à remplir]")
