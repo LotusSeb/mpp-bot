@@ -1,5 +1,5 @@
 """
-MPP Bot - ÉTAPE 3: DEBUG - Afficher tous les textes trouvés
+MPP Bot - ÉTAPE 3: Prédictions - Lire noms correctement
 """
 
 import os
@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
-print("🚀 ÉTAPE 3: DEBUG")
+print("🚀 ÉTAPE 3: Prédictions avec noms")
 
 # Config Chromium
 chrome_options = Options()
@@ -52,9 +52,8 @@ try:
     score_inputs = [i for i in all_inputs if i.is_displayed()]
     print(f"   ✅ {len(score_inputs)} inputs trouvés")
     
-    # DEBUG: Afficher TOUS les textes du premier match
-    print("\n📊 DEBUG - Tous les textes du Match 1:")
-    js_debug = """
+    # Récupère TOUS les textes une fois
+    js_all_text = """
     const inputs = document.querySelectorAll('input');
     const input = inputs[0];
     
@@ -70,9 +69,74 @@ try:
     return lines;
     """
     
-    all_text = driver.execute_script(js_debug)
-    for i, text in enumerate(all_text):
-        print(f"   [{i}] {text}")
+    all_text = driver.execute_script(js_all_text)
+    
+    # Lire les % et noms pour chaque match
+    print("\n📊 Calcul des prédictions...")
+    match_count = 0
+    i = 0
+    while i < len(all_text) and match_count < 3:
+        text = all_text[i]
+        
+        # Cherche un % pour identifier le match
+        if '%' in text:
+            # Récupère les 3 % du match
+            pct1 = int(text.rstrip('%'))
+            pct2 = int(all_text[i+2].rstrip('%'))
+            pct3 = int(all_text[i+4].rstrip('%'))
+            
+            # Cherche les noms: remonte pour trouver 2 textes sans %
+            team_names = []
+            for j in range(i-1, max(0, i-10), -1):
+                if '%' not in all_text[j] and len(all_text[j]) > 0 and all_text[j] not in ['Créer', 'Rejoindre', 'Importer', 'Afficher stats', 'Dimanche', 'août', 'J.1', '-', 'Activer']:
+                    team_names.insert(0, all_text[j])
+                    if len(team_names) == 2:
+                        break
+            
+            if len(team_names) >= 2:
+                team_home = team_names[-2]
+                team_away = team_names[-1]
+                match_name = f"{team_home} vs {team_away}"
+                
+                # Prédiction de base: 1-1
+                our_home = 1
+                our_away = 1
+                pcts = [pct1, pct2, pct3]
+                max_idx = pcts.index(max(pcts))
+                
+                if max_idx == 0:
+                    consensus_pred = (1, 0)
+                elif max_idx == 1:
+                    consensus_pred = (1, 1)
+                else:
+                    consensus_pred = (0, 1)
+                
+                final_home = int(our_home * 0.25 + consensus_pred[0] * 0.75)
+                final_away = int(our_away * 0.25 + consensus_pred[1] * 0.75)
+                
+                bonus_str = ""
+                if max(pcts) > 80:
+                    bonus_str = " (+1 bonus)"
+                    if max_idx == 0:
+                        final_home += 1
+                    elif max_idx == 1:
+                        final_home += 1
+                        final_away += 1
+                    else:
+                        final_away += 1
+                
+                print(f"   ✅ {match_name}")
+                print(f"      Consensus: {pct1}% {pct2}% {pct3}%")
+                print(f"      Pondéré: {final_home}-{final_away}{bonus_str}")
+                
+                match_count += 1
+                i += 5
+            else:
+                i += 1
+        else:
+            i += 1
+    
+    print("\n✅ ÉTAPE 3 RÉUSSIE!")
 
 except Exception as e:
     print(f"\n❌ ERREUR: {e}")
