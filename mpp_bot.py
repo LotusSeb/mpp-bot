@@ -1,5 +1,5 @@
 """
-MPP Bot - ÉTAPE 5: Complet + Email
+MPP Bot - Complet avec clic réel
 """
 
 import os
@@ -11,8 +11,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.keys import Keys
 
-print("🚀 ÉTAPE 5: Complet + Email")
+print("🚀 MPP BOT COMPLET")
 
 chrome_options = Options()
 chrome_options.add_argument('--headless')
@@ -52,7 +53,7 @@ try:
     score_inputs = [i for i in all_inputs if i.is_displayed()]
     print(f"   ✅ {len(score_inputs)} inputs trouvés")
     
-    # ÉTAPE 3: Lire les noms et %
+    # Lire les noms et %
     js_all_text = """
     const inputs = document.querySelectorAll('input');
     const input = inputs[0];
@@ -140,40 +141,28 @@ try:
                 if match_count >= 3:
                     break
     
-    # ÉTAPE 4: Remplir les scores
+    # Remplir les scores avec clic RÉEL
     print("\n📝 Remplissage des scores...")
     for idx, pred in enumerate(predictions):
         input_idx = idx * 2
         
         if input_idx + 1 < len(score_inputs):
-            # Remplir home via JavaScript
-            js_home = f"""
-            const inputs = document.querySelectorAll('input');
-            const input = inputs[{input_idx}];
-            input.focus();
-            input.select();
-            input.value = '{pred['home']}';
-            input.dispatchEvent(new Event('input', {{ bubbles: true }}));
-            input.dispatchEvent(new Event('change', {{ bubbles: true }}));
-            input.dispatchEvent(new Event('blur', {{ bubbles: true }}));
-            """
-            driver.execute_script(js_home)
-            
-            js_away = f"""
-            const inputs = document.querySelectorAll('input');
-            const input = inputs[{input_idx + 1}];
-            input.focus();
-            input.select();
-            input.value = '{pred['away']}';
-            input.dispatchEvent(new Event('input', {{ bubbles: true }}));
-            input.dispatchEvent(new Event('change', {{ bubbles: true }}));
-            input.dispatchEvent(new Event('blur', {{ bubbles: true }}));
-            """
-            driver.execute_script(js_away)
-            
             print(f"   ✅ {pred['match']}: {pred['home']}-{pred['away']}")
+            
+            # Attendre 2 sec pour laisser overlay disparaître
+            time.sleep(2)
+            score_inputs[input_idx].click()
+            time.sleep(0.1)
+            score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
+            score_inputs[input_idx].send_keys(str(pred['home']))
+            
+            time.sleep(2)
+            score_inputs[input_idx + 1].click()
+            time.sleep(0.1)
+            score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
+            score_inputs[input_idx + 1].send_keys(str(pred['away']))
     
-    # ÉTAPE 5: Envoyer email
+    # Envoyer email
     print("\n📧 Envoi email...")
     sender_email = os.getenv('GMAIL_EMAIL')
     sender_password = os.getenv('GMAIL_PASSWORD')
@@ -225,7 +214,7 @@ try:
     else:
         print("   ⚠️ Credentials Gmail manquants")
     
-    print("\n✅ BOT COMPLET - RÉUSSI!")
+    print("\n✅ BOT RÉUSSI!")
 
 except Exception as e:
     print(f"\n❌ ERREUR: {e}")
