@@ -1,6 +1,6 @@
 """
 MPP Ligue 1 Bot - Automatisation des pronostics
-VERSION STABLE QUI MARCHE
+VERSION STABLE + LOGS
 """
 
 import os
@@ -27,6 +27,7 @@ class LiguePredictor:
     
     def get_next_7_days_matchs(self):
         try:
+            print("[1/4] Récupération des matchs...")
             today = datetime.now()
             next_week = today + timedelta(days=7)
             
@@ -38,15 +39,18 @@ class LiguePredictor:
                 'dateTo': next_week.strftime('%Y-%m-%d')
             }
             
+            print(f"   🌐 Appel API: {url}")
             response = requests.get(url, headers=headers, params=params, timeout=10)
+            print(f"   📊 Réponse: {response.status_code}")
             
             if response.status_code == 200:
                 self.matchs = response.json().get('matches', [])
-                print(f"✅ {len(self.matchs)} matchs trouvés")
+                print(f"   ✅ {len(self.matchs)} matchs trouvés")
                 return True
+            print(f"   ❌ Erreur API: {response.status_code}")
             return False
         except Exception as e:
-            print(f"❌ Erreur API: {e}")
+            print(f"   ❌ Exception: {e}")
             return False
     
     def get_team_last_7_matches(self, team_id):
@@ -111,11 +115,19 @@ class LiguePredictor:
             return None
     
     def generate_predictions(self):
+        print("[2/4] Génération des prédictions...")
         predictions = []
         for match in self.matchs:
             pred = self.predict_score(match)
             if pred:
                 predictions.append(pred)
+        
+        print(f"   ✅ {len(predictions)} prédictions générées")
+        for p in predictions[:3]:
+            print(f"      • {p['home_team']} {p['home_goals']}-{p['away_goals']}")
+        if len(predictions) > 3:
+            print(f"      ... et {len(predictions)-3} autres")
+        
         return predictions
 
 
@@ -126,6 +138,7 @@ class MPPBot:
         self.driver = None
     
     def setup_driver(self):
+        print("\n[3/4] Configuration du navigateur...")
         chrome_options = Options()
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--no-sandbox')
@@ -137,70 +150,145 @@ class MPPBot:
         chrome_options.binary_location = '/usr/bin/chromium-browser'
         service = Service('/usr/bin/chromedriver')
         
-        self.driver = webdriver.Chrome(service=service, options=chrome_options)
-        self.driver.set_page_load_timeout(15)
-        self.driver.implicitly_wait(3)
-        print("✅ Navigateur OK")
+        try:
+            print("   🔧 Initialisation Chromium...")
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            self.driver.set_page_load_timeout(15)
+            self.driver.implicitly_wait(3)
+            print("   ✅ Navigateur OK")
+        except Exception as e:
+            print(f"   ❌ Erreur navigateur: {e}")
+            raise
     
     def login_mpp(self):
         try:
-            print("\n🔐 Connexion MPP...")
-            self.driver.get(f'{MPP_URL}/')
-            time.sleep(2)
+            print("\n[4/4] === CONNEXION MPP ===")
             
+            print("   [1/5] Accès URL...")
+            print(f"   🌐 {MPP_URL}/")
+            self.driver.get(f'{MPP_URL}/')
+            print(f"   ✅ Page chargée: {self.driver.current_url}")
+            
+            print("   ⏳ Attente 3 sec pour chargement JS...")
+            time.sleep(10)
+            print("   ✅ Page stabilisée")
+            
+            print("   [2/5] Recherche du bouton 'Se connecter'...")
+            all_buttons = self.driver.find_elements(By.TAG_NAME, "button")
+            print(f"   📊 {len(all_buttons)} boutons trouvés")
+            for i, btn in enumerate(all_buttons[:5]):
+                print(f"      [{i}] {btn.text}")
+            
+            print("   🔍 WebDriverWait bouton 'Se connecter'...")
             connect_btn = WebDriverWait(self.driver, 5).until(
                 EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Se connecter')]"))
             )
+            print("   ✅ Bouton trouvé!")
+            
+            print("   [3/5] Clic sur 'Se connecter'...")
             connect_btn.click()
+            print("   ✅ Cliqué")
+            
+            print("   ⏳ Attente 2 sec pour formulaire Auth0...")
             time.sleep(2)
+            print("   ✅ Formulaire visible")
             
-            WebDriverWait(self.driver, 3).until(
+            print("   [4/5] Saisie identifiants...")
+            print("   🔍 WebDriverWait champ 'username'...")
+            username_field = WebDriverWait(self.driver, 3).until(
                 EC.presence_of_element_located((By.ID, 'username'))
-            ).send_keys(self.login)
+            )
+            print("   ✅ Champ trouvé")
+            print(f"   📝 Saisie email: {self.login[:10]}...")
+            username_field.send_keys(self.login)
+            print("   ✅ Email saisi")
             
-            self.driver.find_element(By.ID, 'password').send_keys(self.password)
-            self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]').click()
+            print("   🔍 Recherche champ 'password'...")
+            password_field = self.driver.find_element(By.ID, 'password')
+            print("   ✅ Champ trouvé")
+            print(f"   📝 Saisie password...")
+            password_field.send_keys(self.password)
+            print("   ✅ Password saisi")
             
+            print("   [5/5] Soumission formulaire...")
+            print("   🔍 Recherche bouton submit...")
+            submit_btn = self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]')
+            print("   ✅ Bouton trouvé")
+            print("   📤 Envoi...")
+            submit_btn.click()
+            print("   ✅ Formulaire soumis")
+            
+            print("   ⏳ Attente 3 sec pour authentification...")
             time.sleep(3)
-            print("✅ Connecté!")
+            current_url = self.driver.current_url
+            print(f"   ✅ URL finale: {current_url}")
+            print("✅ CONNECTÉ AVEC SUCCÈS!")
             return True
         except Exception as e:
-            print(f"❌ Erreur connexion: {e}")
+            print(f"❌ ERREUR: {e}")
+            if self.driver:
+                print(f"   📍 URL actuelle: {self.driver.current_url}")
             return False
     
     def fill_predictions(self, predictions):
         try:
-            print(f"\n📝 Remplissage {len(predictions)} matchs...")
+            print(f"\n📝 === REMPLISSAGE ===")
+            print(f"   [{len(predictions)} matchs à remplir]")
             
+            print("\n   [1/2] Recherche des champs input...")
             all_inputs = self.driver.find_elements(By.TAG_NAME, "input")
-            score_inputs = [i for i in all_inputs if i.is_displayed()]
+            print(f"   📊 {len(all_inputs)} inputs trouvés au total")
             
+            score_inputs = [i for i in all_inputs if i.is_displayed()]
+            print(f"   ✅ {len(score_inputs)} champs visibles")
+            
+            print("\n   [2/2] Remplissage des scores...")
             for idx, pred in enumerate(predictions):
                 input_idx = idx * 2
                 if input_idx + 1 < len(score_inputs):
+                    print(f"\n      Match {idx+1}:")
+                    print(f"      📋 {pred['home_team']} vs {pred['away_team']}")
+                    print(f"      📝 Prédiction: {pred['home_goals']}-{pred['away_goals']}")
+                    
+                    print(f"      🧹 Clear input home...")
                     score_inputs[input_idx].clear()
+                    print(f"      ✅ Cleared")
+                    
+                    print(f"      📝 Send keys home: {pred['home_goals']}")
                     score_inputs[input_idx].send_keys(str(pred['home_goals']))
+                    print(f"      ✅ Saisi")
                     
+                    print(f"      🧹 Clear input away...")
                     score_inputs[input_idx + 1].clear()
-                    score_inputs[input_idx + 1].send_keys(str(pred['away_goals']))
+                    print(f"      ✅ Cleared")
                     
-                    print(f"   ✅ {pred['home_team']} {pred['home_goals']}-{pred['away_goals']}")
+                    print(f"      📝 Send keys away: {pred['away_goals']}")
+                    score_inputs[input_idx + 1].send_keys(str(pred['away_goals']))
+                    print(f"      ✅ Saisi")
+                    
+                    print(f"      ✅ Match rempli!")
+                else:
+                    print(f"      ⚠️ Pas assez d'inputs pour match {idx+1}")
             
-            print("✅ Tous les pronostics remplis!")
+            print("\n✅ TOUS LES PRONOSTICS REMPLIS!")
             return True
         except Exception as e:
-            print(f"❌ Erreur: {e}")
+            print(f"\n❌ ERREUR REMPLISSAGE: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def close(self):
         if self.driver:
+            print("\n🛑 Fermeture navigateur...")
             self.driver.quit()
+            print("   ✅ Fermé")
 
 
 def main():
-    print("=" * 50)
+    print("=" * 60)
     print("🚀 MPP BOT LIGUE 1")
-    print("=" * 50)
+    print("=" * 60)
     
     predictor = LiguePredictor()
     if not predictor.get_next_7_days_matchs():
@@ -208,22 +296,28 @@ def main():
     
     predictions = predictor.generate_predictions()
     if not predictions:
+        print("❌ Aucune prédiction générée")
         return False
-    
-    print(f"📊 {len(predictions)} prédictions")
     
     bot = MPPBot(LOGIN, PASSWORD)
     try:
         bot.setup_driver()
         if bot.login_mpp():
-            bot.fill_predictions(predictions)
+            if bot.fill_predictions(predictions):
+                print("\n" + "=" * 60)
+                print("✅ BOT TERMINÉ AVEC SUCCÈS!")
+                print("=" * 60)
+                return True
+        else:
+            print("❌ Connexion échouée")
+            return False
+    except Exception as e:
+        print(f"❌ Erreur main: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
     finally:
         bot.close()
-    
-    print("\n" + "=" * 50)
-    print("✅ SUCCÈS!")
-    print("=" * 50)
-    return True
 
 
 if __name__ == '__main__':
