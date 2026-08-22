@@ -1,6 +1,6 @@
 """
 MPP Ligue 1 Bot - Automatisation des pronostics
-VERSION QUI MARCHE
+VERSION SIMPLE + .clear()
 """
 
 import os
@@ -189,31 +189,6 @@ class MPPBot:
             print(f"❌ ERREUR: {e}")
             return False
     
-    def blend_predictions(self, our_home, our_away):
-        """Pondère 50/50: notre algo + consensus des parieurs"""
-        try:
-            # Lit les % de la page
-            page_text = self.driver.page_source
-            percentages = re.findall(r'(\d+)%', page_text)
-            
-            if len(percentages) >= 2:
-                # Prend les 2 plus hauts % comme consensus
-                # (supposition: ils représentent le score favori)
-                sorted_pct = sorted([int(p) for p in percentages if int(p) > 0], reverse=True)
-                if len(sorted_pct) >= 2:
-                    consensus_home = sorted_pct[0]
-                    consensus_away = sorted_pct[1]
-                    
-                    # Pondération 50/50
-                    final_home = round((our_home + consensus_home/10) / 2)
-                    final_away = round((our_away + consensus_away/10) / 2)
-                    return final_home, final_away
-        except:
-            pass
-        
-        # Si erreur, retourne notre prédiction
-        return our_home, our_away
-
     def fill_predictions(self, predictions):
         try:
             print(f"\n📝 === REMPLISSAGE ===")
@@ -228,10 +203,8 @@ class MPPBot:
                 input_idx = idx * 2
                 if input_idx + 1 < len(score_inputs):
                     score_inputs[input_idx].clear()
-                    score_inputs[input_idx].clear()
                     score_inputs[input_idx].send_keys(str(pred['home_goals']))
                     
-                    score_inputs[input_idx + 1].clear()
                     score_inputs[input_idx + 1].clear()
                     score_inputs[input_idx + 1].send_keys(str(pred['away_goals']))
                     
