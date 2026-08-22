@@ -1,7 +1,6 @@
 """
 MPP Ligue 1 Bot - Automatisation des pronostics
 Avec pondération 50/50: Notre algo + Consensus des parieurs
-VERSION AVEC LOGS DÉTAILLÉS
 """
 
 import os
@@ -167,18 +166,23 @@ class MPPBot:
             print("   [1/5] Accès à MPP...")
             self.driver.get(f'{MPP_URL}/')
             print(f"   ✅ {self.driver.current_url}")
-            time.sleep(2)
+            print("   ⏳ Attente chargement (4 sec)...")
+            time.sleep(4)
             
-            print("   [2/5] Clic 'Se connecter'...")
-            connect_btn = WebDriverWait(self.driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Se connecter')]"))
+            print("   [2/5] Recherche bouton 'Se connecter'...")
+            all_buttons = self.driver.find_elements(By.TAG_NAME, "button")
+            print(f"   📊 {len(all_buttons)} boutons trouvés")
+            
+            print("   [3/5] Clic 'Se connecter'...")
+            connect_btn = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Se connecter')]"))
             )
             connect_btn.click()
             print("   ✅ Clic OK")
-            time.sleep(2)
+            time.sleep(3)
             
-            print("   [3/5] Saisie identifiants...")
-            username_field = WebDriverWait(self.driver, 3).until(
+            print("   [4/5] Saisie identifiants...")
+            username_field = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, 'username'))
             )
             username_field.send_keys(self.login)
@@ -188,12 +192,11 @@ class MPPBot:
             password_field.send_keys(self.password)
             print("   ✅ Password saisi")
             
-            print("   [4/5] Soumission...")
+            print("   [5/5] Soumission...")
             submit_btn = self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]')
             submit_btn.click()
             print("   ✅ Soumis")
             
-            print("   [5/5] Attente authentification...")
             time.sleep(3)
             print(f"   ✅ URL: {self.driver.current_url}")
             print("✅ CONNECTÉ!")
@@ -203,53 +206,42 @@ class MPPBot:
             print(f"   URL actuelle: {self.driver.current_url if self.driver else 'N/A'}")
             return False
     
-    def read_consensus_predictions(self):
-        """Lit les % des autres parieurs"""
-        try:
-            print("\n📊 Lecture du consensus...")
-            page_text = self.driver.page_source
-            percentages = re.findall(r'(\d+)%', page_text)
-            print(f"   ✅ {len(percentages)} pourcentages trouvés")
-            return percentages
-        except Exception as e:
-            print(f"   ⚠️ Erreur: {e}")
-            return []
-    
-    def blend_predictions(self, our_pred_home, our_pred_away):
+    def blend_predictions(self, idx, our_home, our_away):
         """Pondère 50/50: notre algo + consensus"""
-        # Pour maintenant: garder notre prédiction
-        # À améliorer: lire % par match et pondérer
-        return our_pred_home, our_pred_away
+        # Pour maintenant: utilise notre algo
+        # À améliorer: ajouter la pondération consensus
+        return our_home, our_away, "🤖 algo"
     
     def fill_predictions(self, predictions):
         try:
             print(f"\n📝 === REMPLISSAGE ===")
             print(f"   [{len(predictions)} matchs]")
             
-            print("\n   [1/3] Lecture du consensus...")
-            consensus = self.read_consensus_predictions()
-            
-            print("\n   [2/3] Recherche des champs...")
+            print("\n   [1/2] Recherche des champs...")
             all_inputs = self.driver.find_elements(By.TAG_NAME, "input")
             score_inputs = [i for i in all_inputs if i.is_displayed()]
             print(f"   ✅ {len(score_inputs)} champs trouvés")
             
-            print("\n   [3/3] Remplissage des scores...")
+            print("\n   [2/2] Remplissage des scores...")
+            
             for idx, pred in enumerate(predictions):
                 input_idx = idx * 2
                 if input_idx + 1 < len(score_inputs):
-                    home_goals, away_goals = self.blend_predictions(
+                    final_home, final_away, method = self.blend_predictions(
+                        idx, 
                         pred['home_goals'],
                         pred['away_goals']
                     )
                     
                     score_inputs[input_idx].clear()
-                    score_inputs[input_idx].send_keys(str(home_goals))
+                    score_inputs[input_idx].send_keys(str(final_home))
+                    
                     score_inputs[input_idx + 1].clear()
-                    score_inputs[input_idx + 1].send_keys(str(away_goals))
-                    print(f"      ✅ [{idx+1}] {pred['home_team']} {home_goals}-{away_goals}")
+                    score_inputs[input_idx + 1].send_keys(str(final_away))
+                    
+                    print(f"      ✅ [{idx+1}] {pred['home_team']} {final_home}-{final_away}")
             
-            print("\n✅ TOUS LES PRONOSTICS REMPLIS ET VALIDÉS!")
+            print("\n✅ TOUS LES PRONOSTICS REMPLIS!")
             return True
         except Exception as e:
             print(f"\n❌ ERREUR: {e}")
