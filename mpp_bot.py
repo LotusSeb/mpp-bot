@@ -149,7 +149,7 @@ try:
             # Remplir home via JavaScript
             js_home = f"""
             const inputs = document.querySelectorAll('input');
-            inputs[{input_idx}].value = '';
+            inputs[{input_idx}].value = inputs[{input_idx}].value.slice(0, -2);
             inputs[{input_idx}].value = '{pred['home']}';
             inputs[{input_idx}].dispatchEvent(new Event('input', {{ bubbles: true }}));
             inputs[{input_idx}].dispatchEvent(new Event('change', {{ bubbles: true }}));
@@ -158,7 +158,7 @@ try:
             
             js_away = f"""
             const inputs = document.querySelectorAll('input');
-            inputs[{input_idx + 1}].value = '';
+            inputs[{input_idx + 1}].value = inputs[{input_idx + 1}].value.slice(0, -2);
             inputs[{input_idx + 1}].value = '{pred['away']}';
             inputs[{input_idx + 1}].dispatchEvent(new Event('input', {{ bubbles: true }}));
             inputs[{input_idx + 1}].dispatchEvent(new Event('change', {{ bubbles: true }}));
