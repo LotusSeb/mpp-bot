@@ -370,17 +370,24 @@ class MPPBot:
                 print("   ⚠️ Credentials Gmail manquants (GMAIL_EMAIL, GMAIL_PASSWORD)")
                 return
             
-            # Création du tableau HTML
+            # Crée un dict avec les scores finaux par nom de match
+            scores_by_name = {}
+            for idx, pred in enumerate(predictions):
+                if idx < len(match_names):
+                    match_name = match_names[idx]
+                    score = f"{pred['home_goals']}-{pred['away_goals']}"
+                    scores_by_name[match_name] = score
+            
+            # Création du tableau HTML avec les scores dans le bon ordre
             html_table = "<table style='border-collapse: collapse; width: 100%;'>\n"
             html_table += "<tr style='background-color: #4CAF50; color: white;'>"
             html_table += "<th style='border: 1px solid black; padding: 8px;'>Match</th>"
             html_table += "<th style='border: 1px solid black; padding: 8px;'>Prédiction</th>"
             html_table += "</tr>\n"
             
-            for idx, pred in enumerate(predictions[:8]):  # 8 matchs visibles
-                if idx < len(match_names):
-                    match_name = match_names[idx]
-                    score = f"{pred['home_goals']}-{pred['away_goals']}"
+            for idx, match_name in enumerate(match_names[:8]):  # 8 matchs visibles
+                if match_name in scores_by_name:
+                    score = scores_by_name[match_name]
                     color = "#f2f2f2" if idx % 2 == 0 else "white"
                     html_table += f"<tr style='background-color: {color};'>"
                     html_table += f"<td style='border: 1px solid black; padding: 8px;'>{match_name}</td>"
