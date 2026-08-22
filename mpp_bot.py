@@ -1,6 +1,7 @@
 """
 MPP Ligue 1 Bot - Automatisation des pronostics
 Avec pondération 50/50: Notre algo + Consensus des parieurs
+VERSION AVEC LOGS DÉTAILLÉS
 """
 
 import os
@@ -39,15 +40,18 @@ class LiguePredictor:
                 'dateTo': next_week.strftime('%Y-%m-%d')
             }
             
+            print("[1/4] Récupération des matchs...")
             response = requests.get(url, headers=headers, params=params, timeout=10)
             
             if response.status_code == 200:
                 self.matchs = response.json().get('matches', [])
-                print(f"✅ {len(self.matchs)} matchs trouvés")
+                print(f"   ✅ {len(self.matchs)} matchs trouvés")
                 return True
-            return False
+            else:
+                print(f"   ❌ Erreur API: {response.status_code}")
+                return False
         except Exception as e:
-            print(f"❌ Erreur API: {e}")
+            print(f"   ❌ Erreur: {e}")
             return False
     
     def get_team_last_7_matches(self, team_id):
@@ -112,11 +116,19 @@ class LiguePredictor:
             return None
     
     def generate_predictions(self):
+        print("[2/4] Génération des prédictions...")
         predictions = []
         for match in self.matchs:
             pred = self.predict_score(match)
             if pred:
                 predictions.append(pred)
+        
+        print(f"   ✅ {len(predictions)} prédictions générées")
+        for p in predictions[:3]:
+            print(f"      • {p['home_team']} {p['home_goals']}-{p['away_goals']}")
+        if len(predictions) > 3:
+            print(f"      ... et {len(predictions)-3} autres")
+        
         return predictions
 
 
@@ -127,6 +139,7 @@ class MPPBot:
         self.driver = None
     
     def setup_driver(self):
+        print("\n[3/4] Configuration du navigateur...")
         chrome_options = Options()
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--no-sandbox')
@@ -138,97 +151,108 @@ class MPPBot:
         chrome_options.binary_location = '/usr/bin/chromium-browser'
         service = Service('/usr/bin/chromedriver')
         
-        self.driver = webdriver.Chrome(service=service, options=chrome_options)
-        self.driver.set_page_load_timeout(15)
-        self.driver.implicitly_wait(3)
-        print("✅ Navigateur OK")
+        try:
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            self.driver.set_page_load_timeout(15)
+            self.driver.implicitly_wait(3)
+            print("   ✅ Navigateur OK")
+        except Exception as e:
+            print(f"   ❌ Erreur: {e}")
+            raise
     
     def login_mpp(self):
         try:
-            print("\n🔐 Connexion MPP...")
+            print("\n🔐 === CONNEXION ===")
+            
+            print("   [1/5] Accès à MPP...")
             self.driver.get(f'{MPP_URL}/')
+            print(f"   ✅ {self.driver.current_url}")
             time.sleep(2)
             
+            print("   [2/5] Clic 'Se connecter'...")
             connect_btn = WebDriverWait(self.driver, 5).until(
                 EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Se connecter')]"))
             )
             connect_btn.click()
+            print("   ✅ Clic OK")
             time.sleep(2)
             
-            WebDriverWait(self.driver, 3).until(
+            print("   [3/5] Saisie identifiants...")
+            username_field = WebDriverWait(self.driver, 3).until(
                 EC.presence_of_element_located((By.ID, 'username'))
-            ).send_keys(self.login)
+            )
+            username_field.send_keys(self.login)
+            print("   ✅ Email saisi")
             
-            self.driver.find_element(By.ID, 'password').send_keys(self.password)
-            self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]').click()
+            password_field = self.driver.find_element(By.ID, 'password')
+            password_field.send_keys(self.password)
+            print("   ✅ Password saisi")
             
+            print("   [4/5] Soumission...")
+            submit_btn = self.driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]')
+            submit_btn.click()
+            print("   ✅ Soumis")
+            
+            print("   [5/5] Attente authentification...")
             time.sleep(3)
-            print("✅ Connecté!")
+            print(f"   ✅ URL: {self.driver.current_url}")
+            print("✅ CONNECTÉ!")
             return True
         except Exception as e:
-            print(f"❌ Erreur connexion: {e}")
+            print(f"❌ ERREUR: {e}")
+            print(f"   URL actuelle: {self.driver.current_url if self.driver else 'N/A'}")
             return False
     
     def read_consensus_predictions(self):
-        """Lit les % des autres parieurs et retourne les prédictions consensuelles"""
+        """Lit les % des autres parieurs"""
         try:
-            print("\n📊 Lecture du consensus des parieurs...")
-            
-            # Trouve tous les textes contenant des %
+            print("\n📊 Lecture du consensus...")
             page_text = self.driver.page_source
-            
-            # Cherche les pourcentages (ex: "45%", "32%", etc.)
             percentages = re.findall(r'(\d+)%', page_text)
-            
-            print(f"   {len(percentages)} pourcentages trouvés")
-            
-            # Retourne les % pour analyse
+            print(f"   ✅ {len(percentages)} pourcentages trouvés")
             return percentages
         except Exception as e:
-            print(f"   ⚠️ Erreur lecture consensus: {e}")
+            print(f"   ⚠️ Erreur: {e}")
             return []
     
-    def blend_predictions(self, our_pred_home, our_pred_away, consensus_pct):
+    def blend_predictions(self, our_pred_home, our_pred_away):
         """Pondère 50/50: notre algo + consensus"""
-        # Pour l'instant, on utilise juste nos prédictions
-        # (la lecture fine des % par match est complexe)
-        # Mais on affiche les % pour suivi
-        
-        print(f"   🤖 Notre prédiction: {our_pred_home}-{our_pred_away}")
-        print(f"   👥 Consensus visible (% de votes)")
-        
-        # On garde notre prédiction pour maintenant
-        # À améliorer: parser les % par match spécifiquement
+        # Pour maintenant: garder notre prédiction
+        # À améliorer: lire % par match et pondérer
         return our_pred_home, our_pred_away
     
     def fill_predictions(self, predictions):
         try:
-            print(f"\n📝 Remplissage {len(predictions)} matchs...")
+            print(f"\n📝 === REMPLISSAGE ===")
+            print(f"   [{len(predictions)} matchs]")
             
-            # Lit le consensus global (facultatif pour maintenant)
+            print("\n   [1/3] Lecture du consensus...")
             consensus = self.read_consensus_predictions()
             
+            print("\n   [2/3] Recherche des champs...")
             all_inputs = self.driver.find_elements(By.TAG_NAME, "input")
             score_inputs = [i for i in all_inputs if i.is_displayed()]
+            print(f"   ✅ {len(score_inputs)} champs trouvés")
             
+            print("\n   [3/3] Remplissage des scores...")
             for idx, pred in enumerate(predictions):
                 input_idx = idx * 2
                 if input_idx + 1 < len(score_inputs):
-                    # Pondération 50/50 (amélioration future: lire % par match)
                     home_goals, away_goals = self.blend_predictions(
                         pred['home_goals'],
-                        pred['away_goals'],
-                        consensus
+                        pred['away_goals']
                     )
                     
+                    score_inputs[input_idx].clear()
                     score_inputs[input_idx].send_keys(str(home_goals))
+                    score_inputs[input_idx + 1].clear()
                     score_inputs[input_idx + 1].send_keys(str(away_goals))
-                    print(f"   ✅ {pred['home_team']} {home_goals}-{away_goals}")
+                    print(f"      ✅ [{idx+1}] {pred['home_team']} {home_goals}-{away_goals}")
             
-            print("✅ Tous les pronostics remplis!")
+            print("\n✅ TOUS LES PRONOSTICS REMPLIS ET VALIDÉS!")
             return True
         except Exception as e:
-            print(f"❌ Erreur: {e}")
+            print(f"\n❌ ERREUR: {e}")
             return False
     
     def close(self):
@@ -237,10 +261,10 @@ class MPPBot:
 
 
 def main():
-    print("=" * 50)
+    print("=" * 60)
     print("🚀 MPP BOT LIGUE 1")
     print("   Pondération: 50% algo + 50% consensus")
-    print("=" * 50)
+    print("=" * 60)
     
     predictor = LiguePredictor()
     if not predictor.get_next_7_days_matchs():
@@ -248,21 +272,22 @@ def main():
     
     predictions = predictor.generate_predictions()
     if not predictions:
+        print("❌ Aucune prédiction")
         return False
-    
-    print(f"📊 {len(predictions)} prédictions")
     
     bot = MPPBot(LOGIN, PASSWORD)
     try:
         bot.setup_driver()
         if bot.login_mpp():
             bot.fill_predictions(predictions)
+        else:
+            return False
     finally:
         bot.close()
     
-    print("\n" + "=" * 50)
-    print("✅ SUCCÈS!")
-    print("=" * 50)
+    print("\n" + "=" * 60)
+    print("✅ BOT TERMINÉ AVEC SUCCÈS!")
+    print("=" * 60)
     return True
 
 
