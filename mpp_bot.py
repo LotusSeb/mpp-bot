@@ -291,6 +291,36 @@ class MPPBot:
             traceback.print_exc()
             return []
 
+
+    def blend_with_consensus(self, our_home, our_away, consensus_percentages, match_idx):
+        """Pondère 50/50: notre algo + consensus"""
+        if not consensus_percentages or len(consensus_percentages) < (match_idx + 1) * 3:
+            return our_home, our_away
+        
+        # Récupère les 3 % du match
+        start_idx = match_idx * 3
+        match_pcts = consensus_percentages[start_idx:start_idx + 3]
+        
+        if len(match_pcts) < 3:
+            return our_home, our_away
+        
+        # match_pcts = [dom%, nul%, ext%]
+        # Notre prédiction est 1-1 (nul)
+        # On pondère avec le consensus pour le nul
+        consensus_draw = match_pcts[1]  # % pour le nul
+        
+        # Pondération simple: si consensus faible, on ajuste
+        if consensus_draw < 20:
+            # Nul improbable selon les autres
+            # Essaie de prédire dom ou ext
+            if match_pcts[0] > match_pcts[2]:
+                return 1, 0  # Victoire dom probable
+            else:
+                return 0, 1  # Victoire ext probable
+        
+        # Sinon garder notre prédiction 1-1
+        return our_home, our_away
+
     def fill_predictions(self, predictions):
         try:
             print(f"\n📝 === REMPLISSAGE ===")
@@ -309,20 +339,31 @@ class MPPBot:
                 if input_idx + 1 < len(score_inputs):
                     print(f"\n      Match {idx+1}:")
                     print(f"      📋 {pred['home_team']} vs {pred['away_team']}")
-                    print(f"      📝 Prédiction: {pred['home_goals']}-{pred['away_goals']}")
+                    print(f"      📝 Prédiction algo: {pred['home_goals']}-{pred['away_goals']}")
+                    
+                    # Pondère avec consensus
+                    final_home, final_away = self.blend_with_consensus(
+                        pred['home_goals'],
+                        pred['away_goals'],
+                        self.consensus,
+                        idx
+                    )
+                    
+                    if final_home != pred['home_goals'] or final_away != pred['away_goals']:
+                        print(f"      ⚖️  Pondéré 50/50: {final_home}-{final_away}")
                     
                     # Click, effacer 2 caractères avec Backspace, puis saisit
                     score_inputs[input_idx].click()
                     time.sleep(0.1)
                     score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
-                    score_inputs[input_idx].send_keys(str(pred['home_goals']))
-                    print(f"      ✅ Home: {pred['home_goals']}")
+                    score_inputs[input_idx].send_keys(str(final_home))
+                    print(f"      ✅ Home: {final_home}")
                     
                     score_inputs[input_idx + 1].click()
                     time.sleep(0.1)
                     score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
-                    score_inputs[input_idx + 1].send_keys(str(pred['away_goals']))
-                    print(f"      ✅ Away: {pred['away_goals']}")
+                    score_inputs[input_idx + 1].send_keys(str(final_away))
+                    print(f"      ✅ Away: {final_away}")
                     print(f"      ✅ Saisi")
                     
                     print(f"      ✅ Match rempli!")
