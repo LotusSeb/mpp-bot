@@ -246,8 +246,7 @@ class MPPBot:
     def read_consensus_percentages(self):
         """Lit les % des autres parieurs sur la page"""
         try:
-            print("
-📊 Lecture du consensus...")
+            print("\n📊 Lecture du consensus...")
             import re
             page_text = self.driver.page_source
             
