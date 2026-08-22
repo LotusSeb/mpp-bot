@@ -5,7 +5,6 @@ VERSION STABLE + LOGS
 
 import os
 from datetime import datetime, timedelta
-import pandas as pd
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -394,12 +393,12 @@ class MPPBot:
             msg = MIMEMultipart()
             msg['From'] = sender_email
             msg['To'] = recipient_email
-            msg['Subject'] = f"🏆 Pronostics Ligue 1 - {pd.Timestamp.now().strftime('%d/%m/%Y')}"
+            msg['Subject'] = f"🏆 Pronostics Ligue 1 - {datetime.now().strftime('%d/%m/%Y')}"
             
             body = f"""
             <html>
                 <body style='font-family: Arial, sans-serif;'>
-                    <h2>📊 Pronostics Ligue 1 - Semaine {pd.Timestamp.now().isocalendar()[1]}</h2>
+                    <h2>📊 Pronostics Ligue 1 - Semaine {datetime.now().strftime('%W')}</h2>
                     <p>Voici les pronostics générés automatiquement:</p>
                     {html_table}
                     <p style='margin-top: 20px; font-size: 12px; color: #666;'>
