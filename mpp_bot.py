@@ -296,7 +296,7 @@ class MPPBot:
 
 
     def blend_with_consensus(self, our_home, our_away, consensus_percentages, match_idx):
-        """Pondère 30% algo + 70% consensus"""
+        """Pondère 25% algo + 75% consensus"""
         if not consensus_percentages or len(consensus_percentages) < (match_idx + 1) * 3:
             return our_home, our_away
         
@@ -308,24 +308,26 @@ class MPPBot:
             return our_home, our_away
         
         # match_pcts = [dom%, nul%, ext%]
-        # Pondération 70/30: consensus a 70% de poids
+        print(f"      📊 Consensus: Dom={match_pcts[0]}% Nul={match_pcts[1]}% Ext={match_pcts[2]}%")
         
         # Determine consensus prediction based on highest %
         max_idx = match_pcts.index(max(match_pcts))
         
-        if max_idx == 0:  # Victoire domicile (55%)
+        if max_idx == 0:  # Victoire domicile
             consensus_pred = (1, 0)
-        elif max_idx == 1:  # Nul (4%)
+            consensus_pred_str = "Victoire Dom"
+        elif max_idx == 1:  # Nul
             consensus_pred = (1, 1)
-        else:  # Victoire extérieur (2%)
+            consensus_pred_str = "Nul"
+        else:  # Victoire extérieur
             consensus_pred = (0, 1)
+            consensus_pred_str = "Victoire Ext"
         
-        # Pondération 30% algo (1-1) + 70% consensus
-        # Si consensus est fort (% haut), on le suit plus
-        consensus_strength = max(match_pcts) / 100  # Normalise
+        # Pondération 25% algo + 75% consensus
+        final_home = int(our_home * 0.25 + consensus_pred[0] * 0.75)
+        final_away = int(our_away * 0.25 + consensus_pred[1] * 0.75)
         
-        final_home = int(our_home * 0.3 + consensus_pred[0] * 0.7)
-        final_away = int(our_away * 0.3 + consensus_pred[1] * 0.7)
+        print(f"      ⚖️  Pondération 25/75: {consensus_pred_str} → {final_home}-{final_away}")
         
         return final_home, final_away
 
