@@ -12,6 +12,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.keys import Keys
 import time
 
 LOGIN = os.environ.get('MPP_LOGIN', 'sebsdp@yahoo.fr')
@@ -257,11 +258,14 @@ class MPPBot:
                     print(f"      📋 {pred['home_team']} vs {pred['away_team']}")
                     print(f"      📝 Prédiction: {pred['home_goals']}-{pred['away_goals']}")
                     
-                    score_inputs[input_idx].clear()
+                    # Click, sélectionne tout, puis saisit
+                    score_inputs[input_idx].click()
+                    score_inputs[input_idx].send_keys(Keys.CONTROL + "a")
                     score_inputs[input_idx].send_keys(str(pred['home_goals']))
                     print(f"      ✅ Home: {pred['home_goals']}")
                     
-                    score_inputs[input_idx + 1].clear()
+                    score_inputs[input_idx + 1].click()
+                    score_inputs[input_idx + 1].send_keys(Keys.CONTROL + "a")
                     score_inputs[input_idx + 1].send_keys(str(pred['away_goals']))
                     print(f"      ✅ Away: {pred['away_goals']}")
                     print(f"      ✅ Saisi")
