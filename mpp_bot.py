@@ -141,7 +141,7 @@ try:
                 if match_count >= 3:
                     break
     
-    # Remplir les scores avec clic RÉEL
+    # Remplir les scores
     print("\n📝 Remplissage des scores...")
     for idx, pred in enumerate(predictions):
         input_idx = idx * 2
@@ -149,15 +149,11 @@ try:
         if input_idx + 1 < len(score_inputs):
             print(f"   ✅ {pred['match']}: {pred['home']}-{pred['away']}")
             
-            # Clic + remplissage home
-            time.sleep(4)
             score_inputs[input_idx].click()
             time.sleep(0.1)
             score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
             score_inputs[input_idx].send_keys(str(pred['home']))
             
-            # Clic + remplissage away (attendre 4 sec aussi)
-            time.sleep(4)
             score_inputs[input_idx + 1].click()
             time.sleep(0.1)
             score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
