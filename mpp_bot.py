@@ -174,21 +174,23 @@ class MPPBot:
             print("   ✅ Page stabilisée")
             
             print("   [2/5] Recherche du bouton 'Se connecter'...")
-            all_buttons = self.driver.find_elements(By.TAG_NAME, "button")
-            print(f"   📊 {len(all_buttons)} boutons trouvés")
-            
-            print("   🔍 Cherche le bouton avec du texte...")
+            print("   🔍 Cherche par XPath (n'importe quel élément)...")
             connect_btn = None
-            for i, btn in enumerate(all_buttons):
-                print(f"      Button {i}: text='{btn.text}'")
-                if btn.text and 'connecter' in btn.text.lower():
-                    connect_btn = btn
-                    print(f"   ✅ Bouton trouvé: '{btn.text}'")
-                    break
-            
-            if not connect_btn:
-                print("   ❌ Bouton pas trouvé!")
-                return False
+            try:
+                connect_btn = WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Se connecter')]"))
+                )
+                print(f"   ✅ Élément trouvé: {connect_btn.tag_name}")
+            except:
+                print("   ❌ XPath échoué, cherche par texte partiel...")
+                try:
+                    connect_btn = WebDriverWait(self.driver, 5).until(
+                        EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'connecter')]"))
+                    )
+                    print(f"   ✅ Élément trouvé: {connect_btn.tag_name}")
+                except:
+                    print("   ❌ Bouton 'Se connecter' pas trouvé!")
+                    return False
             
             print("   [3/5] Clic sur 'Se connecter'...")
             connect_btn.click()
