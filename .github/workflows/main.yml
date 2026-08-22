@@ -17,10 +17,10 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install Chromium and ChromeDriver
+      - name: Install Chromium and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-browser chromium-chromedriver
+          sudo apt-get install -y chromium-browser chromium-chromedriver xvfb
       
       - name: Install Python dependencies
         run: |
@@ -32,7 +32,12 @@ jobs:
           MPP_LOGIN: ${{ secrets.MPP_LOGIN }}
           MPP_PASSWORD: ${{ secrets.MPP_PASSWORD }}
           FOOTBALL_API_TOKEN: ${{ secrets.FOOTBALL_API_TOKEN }}
+          GMAIL_EMAIL: ${{ secrets.GMAIL_EMAIL }}
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+          DISPLAY: :99
         run: |
+          # Démarre Xvfb pour le display virtuel
+          Xvfb :99 -screen 0 1024x768x24 &
           python mpp_bot.py
       
       - name: Notify on success
