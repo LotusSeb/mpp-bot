@@ -255,41 +255,6 @@ class MPPBot:
         
         return final_home, final_away
 
-    def _get_match_names_from_page(self, score_inputs):
-        """Lit les noms des matchs DIRECTEMENT de la page MPP"""
-        try:
-            match_names = []
-            
-            for idx in range(0, len(score_inputs), 2):
-                js_code = f"""
-                const inputs = document.querySelectorAll('input');
-                const input = inputs[{idx}];
-                
-                let parent = input;
-                for (let i = 0; i < 10; i++) {{
-                    parent = parent.parentElement;
-                    if (!parent) break;
-                }}
-                
-                const text = parent.textContent;
-                const lines = text.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
-                
-                return lines.slice(0, 5);
-                """
-                
-                try:
-                    lines = self.driver.execute_script(js_code)
-                    if len(lines) >= 2:
-                        team1 = lines[0]
-                        team2 = lines[1]
-                        match_names.append(f"{team1} vs {team2}")
-                except:
-                    pass
-            
-            return match_names
-        except Exception as e:
-            print(f"   ⚠️ Erreur lecture noms: {e}")
-            return []
 
     def send_email_predictions(self, scores_in_order):
         """Envoie un email avec un tableau des pronostics"""
@@ -368,7 +333,6 @@ class MPPBot:
             score_inputs = [i for i in all_inputs if i.is_displayed()]
             print(f"   ✅ {len(score_inputs)} champs visibles")
             
-            match_names_from_page = self._get_match_names_from_page(score_inputs)
             consensus_by_match = self.read_consensus_percentages_per_match(score_inputs)
             scores_in_order = []
             
@@ -376,7 +340,7 @@ class MPPBot:
             for idx, pred in enumerate(predictions):
                 input_idx = idx * 2
                 if input_idx + 1 < len(score_inputs):
-                    match_name = match_names_from_page[idx] if idx < len(match_names_from_page) else f"{pred['home_team']} vs {pred['away_team']}"
+                    match_name = f"{pred['home_team']} vs {pred['away_team']}"
                     
                     print(f"\n      Match {idx+1}:")
                     print(f"      📋 {match_name}")
@@ -398,6 +362,7 @@ class MPPBot:
                         'away_goals': final_away
                     })
                     
+                    # Clic simple comme avant (ça marchait bien!)
                     score_inputs[input_idx].click()
                     time.sleep(0.1)
                     score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
