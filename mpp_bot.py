@@ -232,6 +232,9 @@ class MPPBot:
             print(f"   ✅ URL finale: {current_url}")
             print("✅ CONNECTÉ AVEC SUCCÈS!")
             
+            print("   ⏳ Attente 5 sec pour affichage des %...")
+            time.sleep(5)
+            
             # Lecture du consensus
             self.consensus = self.read_consensus_percentages()
             
