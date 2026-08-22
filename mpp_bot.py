@@ -258,14 +258,16 @@ class MPPBot:
                     print(f"      📋 {pred['home_team']} vs {pred['away_team']}")
                     print(f"      📝 Prédiction: {pred['home_goals']}-{pred['away_goals']}")
                     
-                    # Click, sélectionne tout, puis saisit
+                    # Click, effacer 2 caractères avec Backspace, puis saisit
                     score_inputs[input_idx].click()
-                    score_inputs[input_idx].send_keys(Keys.CONTROL + "a")
+                    time.sleep(0.1)
+                    score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
                     score_inputs[input_idx].send_keys(str(pred['home_goals']))
                     print(f"      ✅ Home: {pred['home_goals']}")
                     
                     score_inputs[input_idx + 1].click()
-                    score_inputs[input_idx + 1].send_keys(Keys.CONTROL + "a")
+                    time.sleep(0.1)
+                    score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
                     score_inputs[input_idx + 1].send_keys(str(pred['away_goals']))
                     print(f"      ✅ Away: {pred['away_goals']}")
                     print(f"      ✅ Saisi")
