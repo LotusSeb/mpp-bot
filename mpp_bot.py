@@ -422,6 +422,7 @@ class MPPBot:
             print(f"   ❌ Erreur email: {e}")
             import traceback
             traceback.print_exc()
+            
         try:
             print(f"\n📝 === REMPLISSAGE ===")
             print(f"   [{len(predictions)} matchs à remplir]")
@@ -474,10 +475,11 @@ class MPPBot:
                     print(f"      ⚠️ Pas assez d'inputs pour match {idx+1}")
             
             print("\n✅ TOUS LES PRONOSTICS REMPLIS!")
-        
-        # Envoi de l'email
-        match_names = [f"{pred['home_team']} vs {pred['away_team']}" for pred in predictions]
-        self.send_email_predictions(predictions, match_names)
+            
+            # Envoi de l'email
+            match_names = [f"{pred['home_team']} vs {pred['away_team']}" for pred in predictions]
+            self.send_email_predictions(predictions, match_names)
+            
             return True
         except Exception as e:
             print(f"\n❌ ERREUR REMPLISSAGE: {e}")
