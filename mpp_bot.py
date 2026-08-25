@@ -138,7 +138,7 @@ try:
                 print(f"   ✅ {match_name}: {final_home}-{final_away}")
                 
                 match_count += 1
-                if match_count >= 3:
+                if match_count >= len(score_inputs) // 2:
                     break
     
     # Remplir les scores
