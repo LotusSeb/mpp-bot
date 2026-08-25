@@ -149,12 +149,16 @@ try:
         if input_idx + 1 < len(score_inputs):
             print(f"   ✅ {pred['match']}: {pred['home']}-{pred['away']}")
             
-            # Clic JavaScript + Selenium sendKeys
+            # Scroll + Clic JavaScript + Selenium sendKeys
+            driver.execute_script(f"document.querySelectorAll('input')[{input_idx}].scrollIntoView({{block: 'center'}});")
+            time.sleep(0.3)
             driver.execute_script(f"document.querySelectorAll('input')[{input_idx}].click();")
             time.sleep(0.1)
             score_inputs[input_idx].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
             score_inputs[input_idx].send_keys(str(pred['home']))
             
+            driver.execute_script(f"document.querySelectorAll('input')[{input_idx + 1}].scrollIntoView({{block: 'center'}});")
+            time.sleep(0.3)
             driver.execute_script(f"document.querySelectorAll('input')[{input_idx + 1}].click();")
             time.sleep(0.1)
             score_inputs[input_idx + 1].send_keys(Keys.BACKSPACE + Keys.BACKSPACE)
