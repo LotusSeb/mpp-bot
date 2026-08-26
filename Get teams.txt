@@ -1,0 +1,24 @@
+"""
+ÉTAPE ISOLÉE - Récupérer la liste des équipes Ligue 1 + leurs IDs
+"""
+
+import os
+import requests
+
+api_token = os.environ.get('FOOTBALL_API_TOKEN', '')
+
+print("🚀 Récupération des équipes Ligue 1")
+
+headers = {'X-Auth-Token': api_token}
+url = 'https://api.football-data.org/v4/competitions/FL1/teams'
+
+response = requests.get(url, headers=headers, timeout=10)
+print(f"Statut: {response.status_code}")
+
+if response.status_code == 200:
+    teams = response.json().get('teams', [])
+    print(f"\n✅ {len(teams)} équipes trouvées:\n")
+    for t in teams:
+        print(f"   ID {t['id']:>4} → {t['name']} (short: {t['shortName']}, tla: {t['tla']})")
+else:
+    print(f"❌ Erreur: {response.text}")
