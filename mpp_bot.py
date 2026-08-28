@@ -5,6 +5,7 @@ MPP Bot - Complet avec clic réel
 import os
 import time
 import smtplib
+import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from selenium import webdriver
@@ -12,6 +13,77 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.keys import Keys
+from team_mapping import MPP_TO_API_ID
+
+api_token = os.environ.get('FOOTBALL_API_TOKEN', '')
+api_headers = {'X-Auth-Token': api_token}
+
+
+def get_team_full_name(team_id):
+    url = f'https://api.football-data.org/v4/teams/{team_id}'
+    response = requests.get(url, headers=api_headers, timeout=10)
+    return response.json().get('name', '')
+
+
+def get_team_stats(team_id, team_full_name):
+    """Recupere les 5 derniers matchs et calcule buts marques/encaisses en moyenne"""
+    url = f'https://api.football-data.org/v4/teams/{team_id}/matches?status=FINISHED&limit=5'
+    response = requests.get(url, headers=api_headers, timeout=10)
+    
+    if response.status_code != 200:
+        return None
+    
+    matches = response.json().get('matches', [])
+    if len(matches) == 0:
+        return None
+    
+    goals_scored = []
+    goals_conceded = []
+    
+    for m in matches:
+        home_name = m['homeTeam']['name']
+        home_score = m['score']['fullTime']['home']
+        away_score = m['score']['fullTime']['away']
+        
+        if home_name == team_full_name:
+            goals_scored.append(home_score)
+            goals_conceded.append(away_score)
+        else:
+            goals_scored.append(away_score)
+            goals_conceded.append(home_score)
+    
+    return {
+        "avg_scored": sum(goals_scored) / len(goals_scored),
+        "avg_conceded": sum(goals_conceded) / len(goals_conceded)
+    }
+
+
+def get_algo_prediction(team_home, team_away):
+    """Calcule la prediction basee sur l'historique (formule domicile/exterieur).
+    Retourne (1, 1) par defaut si les equipes ne sont pas trouvees ou pas de donnees."""
+    if team_home not in MPP_TO_API_ID or team_away not in MPP_TO_API_ID:
+        return (1, 1)
+    
+    id_home = MPP_TO_API_ID[team_home]
+    id_away = MPP_TO_API_ID[team_away]
+    
+    name_home = get_team_full_name(id_home)
+    time.sleep(6)
+    name_away = get_team_full_name(id_away)
+    time.sleep(6)
+    
+    stats_home = get_team_stats(id_home, name_home)
+    time.sleep(6)
+    stats_away = get_team_stats(id_away, name_away)
+    time.sleep(6)
+    
+    if not stats_home or not stats_away:
+        return (1, 1)
+    
+    buts_dom = round((stats_home['avg_scored'] + stats_away['avg_conceded']) / 2)
+    buts_ext = round((stats_away['avg_scored'] + stats_home['avg_conceded']) / 2)
+    
+    return (buts_dom, buts_ext)
 
 print("🚀 MPP BOT COMPLET")
 
@@ -106,8 +178,7 @@ try:
                 
                 match_name = f"{team_home} vs {team_away}"
                 
-                our_home = 1
-                our_away = 1
+                our_home, our_away = get_algo_prediction(team_home, team_away)
                 max_idx = pcts.index(max(pcts))
                 
                 if max_idx == 0:
@@ -117,8 +188,8 @@ try:
                 else:
                     consensus_pred = (0, 1)
                 
-                final_home = int(our_home * 0.25 + consensus_pred[0] * 0.75)
-                final_away = int(our_away * 0.25 + consensus_pred[1] * 0.75)
+                final_home = int(our_home * 0.20 + consensus_pred[0] * 0.80)
+                final_away = int(our_away * 0.20 + consensus_pred[1] * 0.80)
                 
                 if max(pcts) > 80:
                     if max_idx == 0:
@@ -199,7 +270,7 @@ try:
                 <p>Voici les pronostics générés automatiquement:</p>
                 {html_table}
                 <p style='margin-top: 20px; font-size: 12px; color: #666;'>
-                    <em>Pondération: 25% algorithme + 75% consensus</em><br>
+                    <em>Pondération: 20% algorithme (historique 5 derniers matchs) + 80% consensus</em><br>
                     <em>Bonus: +1 but si consensus > 80%</em>
                 </p>
             </body>
